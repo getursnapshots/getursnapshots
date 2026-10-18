@@ -77,8 +77,8 @@ export const siteConfig = {
   business: {
     name: 'SNAP SHOTS',
     legalName: 'Snap Shots Visual Media Studio',
-    tagline: 'your moments our snaps',
-    headline: 'YOUR MOMENTS OUR SNAPS',
+    tagline: 'your moments our snap',
+    headline: 'YOUR MOMENTS OUR SNAP',
     subheadline:
       'Professional reels, photography and visual content created for events, brands, businesses and social media.',
     phone: '+91 90143 19818',

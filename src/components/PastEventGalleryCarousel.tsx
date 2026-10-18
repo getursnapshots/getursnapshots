@@ -129,18 +129,23 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
     <section
       id="past-work"
       className="relative py-8 sm:py-14 bg-transparent overflow-hidden select-none"
-      aria-label="Wall of Snaps Shots continuous image gallery"
+      aria-label="Wall of Snap Shots continuous image gallery"
     >
       {/* Section Header */}
       <div className="text-center max-w-3xl mx-auto px-4 mb-6 sm:mb-8">
-        <p className="uppercase text-[#bd1616] font-bold text-xs sm:text-sm tracking-widest">
-          CURATED GALLERY
-        </p>
+        <div className="flex justify-center mb-3.5">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#bd1616]/15 border border-[#bd1616]/30 shadow-xs">
+            <span className="flex h-2 w-2 rounded-full bg-[#bd1616] animate-ping" />
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#bd1616]">
+              CURATED GALLERY
+            </span>
+          </div>
+        </div>
         <h2
-          className="mt-2 text-center text-white font-extrabold text-3xl sm:text-5xl tracking-tight leading-tight"
+          className="mt-1 text-center text-white font-extrabold text-3xl sm:text-5xl tracking-tight leading-tight"
           id="past-work-title"
         >
-          Wall of Snaps Shots
+          Wall of Snap Shots
         </h2>
         <p className="mt-2.5 text-center text-zinc-400 font-normal text-xs sm:text-sm max-w-lg mx-auto">
           Candid celebrations, authentic emotions, and signature shots captured by our certified creators.

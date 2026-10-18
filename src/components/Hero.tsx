@@ -77,7 +77,7 @@ export const Hero: React.FC<HeroProps> = ({ onWatchReel, onBookClick }) => {
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#bd1616]/15 border border-[#bd1616]/30 shadow-xs">
               <span className="flex h-2 w-2 rounded-full bg-[#bd1616] animate-ping" />
               <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#bd1616]">
-                Your Moments &bull; Our Snaps
+                Your Moments &bull; Our Snap
               </span>
             </div>
           </div>

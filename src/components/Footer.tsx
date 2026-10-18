@@ -90,7 +90,7 @@ export const Footer: React.FC = () => {
               <BrandLogo variant="footer" allowUpload={false} />
             </div>
             <p className="text-[11px] sm:text-xs font-bold tracking-[0.22em] text-[#bd1616] uppercase mt-2.5">
-              your moments &bull; our snaps
+              your moments &bull; our snap
             </p>
           </div>
 
