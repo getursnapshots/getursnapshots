@@ -1,0 +1,11 @@
+# Ensure binary assets are never altered by git line-ending normalization (CRLF/LF conversion)
+*.mp4 binary
+*.webm binary
+*.mov binary
+*.m4v binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.webp binary
+*.ico binary

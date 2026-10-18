@@ -1,0 +1,334 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #bd1616;
+  --color-primary-hover: #9e1212;
+  --color-primary-active: #750d0d;
+  --color-primary-light: #e63939;
+  --color-accent: #bd1616;
+  --color-accent-hover: #9e1212;
+  --color-accent-active: #750d0d;
+  --color-accent-light: #e63939;
+  --color-brand-red: #bd1616;
+  --color-brand-red-dark: #1a0000;
+  --color-brand-red-light: #e63939;
+}
+
+@layer base {
+  :root {
+    --primary: #bd1616;
+    --primary-foreground: #FFFFFF;
+    --accent: #bd1616;
+    --accent-foreground: #FFFFFF;
+    --brand-red: #bd1616;
+    --brand-red-dark: #1a0000;
+    --brand-red-light: #e63939;
+    --brand-black: #0B0B0C;
+    --brand-obsidian: #121214;
+    --brand-surface: #18181B;
+    --brand-cream: #FAFAFA;
+    --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-plus: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Global selection highlight in brand red #bd1616 */
+  ::selection {
+    background-color: #bd1616;
+    color: #FFFFFF;
+  }
+
+  ::-moz-selection {
+    background-color: #bd1616;
+    color: #FFFFFF;
+  }
+
+  body {
+    font-family: var(--font-plus);
+    background: radial-gradient(circle at 50% 0%, #200404 0%, #120202 25%, #080000 60%, #000000 100%) fixed;
+    background-color: #000000;
+    color: #FFFFFF;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-plus);
+    letter-spacing: -0.02em;
+  }
+
+  /* Default focus ring color for interactive controls */
+  :focus-visible {
+    outline-color: #bd1616;
+  }
+
+  input, textarea, select {
+    caret-color: #bd1616;
+  }
+}
+
+@keyframes text-shine {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate3d(0, 0px, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes float-alt {
+  0%, 100% {
+    transform: translate3d(0, 0px, 0) rotate(-1deg);
+  }
+  50% {
+    transform: translate3d(0, -6px, 0) rotate(1deg);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale3d(1, 1, 1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale3d(1.05, 1.05, 1);
+  }
+}
+
+@keyframes red-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(189, 22, 22, 0.85);
+  }
+  70% {
+    box-shadow: 0 0 24px 6px rgba(189, 22, 22, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(189, 22, 22, 0);
+  }
+}
+
+@keyframes red-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(189, 22, 22, 0.7));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(189, 22, 22, 0.95));
+  }
+}
+
+@keyframes red-border {
+  0%, 100% {
+    border-color: rgba(189, 22, 22, 0.6);
+  }
+  50% {
+    border-color: rgba(189, 22, 22, 1);
+  }
+}
+
+@keyframes white-to-red-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-white-red-gradient,
+.animate-white-yellow-gradient,
+.animate-white-darkred-gradient,
+.animate-white-orange-gradient {
+  background: linear-gradient(
+    115deg,
+    #FFFFFF 0%,
+    #FEE2E2 15%,
+    #F87171 35%,
+    #bd1616 50%,
+    #9e1212 58%,
+    #bd1616 72%,
+    #FEE2E2 88%,
+    #FFFFFF 100%
+  );
+  background-size: 240% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: white-to-red-shift 3.5s ease-in-out infinite;
+}
+
+.animate-red-pulse,
+.animate-yellow-pulse,
+.animate-darkred-pulse,
+.animate-orange-pulse {
+  animation: red-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-red-glow,
+.animate-yellow-glow,
+.animate-darkred-glow,
+.animate-orange-glow {
+  animation: red-glow 3s ease-in-out infinite;
+}
+
+.animate-red-border,
+.animate-yellow-border,
+.animate-darkred-border,
+.animate-orange-border {
+  animation: red-border 2.5s ease-in-out infinite;
+}
+
+.animate-text-shine {
+  background-size: 200% auto;
+  animation: text-shine 4s linear infinite;
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+.animate-float-alt {
+  animation: float-alt 6s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272A;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bd1616;
+}
+
+/* Hide scrollbar for clean horizontal scrolling carousels */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth Infinite Brand Logo Marquee with GPU Acceleration */
+@keyframes marquee {
+  0% { transform: translate3d(0%, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Continuous Gallery Infinite Marquee Scroll */
+@keyframes gallery-continuous-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-gallery-continuous {
+  display: flex;
+  width: max-content;
+  animation: gallery-continuous-scroll 45s linear infinite;
+  will-change: transform;
+}
+
+@media (max-width: 640px) {
+  .animate-gallery-continuous {
+    animation-duration: 32s;
+  }
+}
+
+/* Subtle Shimmer Animation for Skeleton Loaders */
+@keyframes shimmer {
+  0% { transform: translate3d(-100%, 0, 0); }
+  100% { transform: translate3d(100%, 0, 0); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform;
+}
+
+/* Fluid Micro-Interaction Easing */
+button, a {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Mobile-Friendly & Smooth Scrolling Optimization Utilities */
+html {
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hardware accelerated layer */
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Prevent auto-zoom on iOS inputs when focused */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Momentum scrolling on touch devices */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+}
+
+/* Safe area padding */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+

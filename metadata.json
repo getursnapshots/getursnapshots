@@ -1,0 +1,6 @@
+{
+  "name": "Snap Shots",
+  "description": "Professional reels, photography and videography for events, brands, businesses and social media.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

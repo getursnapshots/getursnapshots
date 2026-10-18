@@ -1,0 +1,106 @@
+{
+  "entities": {
+    "Slide": {
+      "title": "Slide",
+      "description": "Represents a custom video slide for the Snap Shots portfolio carousel.",
+      "type": "object",
+      "properties": {
+        "slideIndex": {
+          "type": "integer",
+          "description": "Zero-based index of the portfolio slide (0-20)."
+        },
+        "videoUrl": {
+          "type": "string",
+          "description": "Public URL of the video stream or MP4 asset."
+        },
+        "posterUrl": {
+          "type": "string",
+          "description": "Optional poster thumbnail image URL."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of when the slide was last updated."
+        }
+      },
+      "required": ["slideIndex", "videoUrl"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A client booking request for photography or videography services.",
+      "type": "object",
+      "properties": {
+        "clientName": {
+          "type": "string",
+          "description": "Full name of the client making the booking."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number or WhatsApp number."
+        },
+        "email": {
+          "type": "string",
+          "description": "Client email address."
+        },
+        "service": {
+          "type": "string",
+          "description": "Selected service (e.g. Wedding Reels, Event Reels)."
+        },
+        "package": {
+          "type": "string",
+          "description": "Selected package (e.g. Hourly Plan, Half Day Plan)."
+        },
+        "eventDate": {
+          "type": "string",
+          "description": "Date of the scheduled shoot or event."
+        },
+        "city": {
+          "type": "string",
+          "description": "Location or city for the shoot."
+        },
+        "country": {
+          "type": "string",
+          "description": "Country code (IN or US)."
+        },
+        "requirements": {
+          "type": "string",
+          "description": "Additional notes, styling preferences, or brief from the client."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "completed", "cancelled"],
+          "description": "Current status of the booking enquiry."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when the booking request was submitted."
+        }
+      },
+      "required": ["clientName", "phone", "service", "createdAt"]
+    },
+    "TestConnectionProbe": {
+      "title": "TestConnectionProbe",
+      "description": "Health check document used to verify Firestore connectivity.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Connectivity test status."
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/test/{docId}": {
+      "schema": "TestConnectionProbe",
+      "description": "Connection readiness probe."
+    },
+    "/slides/{slideId}": {
+      "schema": "Slide",
+      "description": "Customized video slides displayed in the portfolio carousel."
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Customer booking enquiries submitted through the booking modal or contact form."
+    }
+  }
+}
