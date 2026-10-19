@@ -77,8 +77,8 @@ export interface BookingFormData {
   email: string;
   service: string;
   date: string;
-  time: string;
-  duration: string;
+  time?: string;
+  duration?: string;
   location: string;
   requirements: string;
   country?: string;

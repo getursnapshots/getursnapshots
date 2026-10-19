@@ -34,6 +34,7 @@ import {
   validateBookingForm,
   buildWhatsAppBookingUrl,
   submitBookingRequest,
+  buildMailtoUrl,
 } from '../utils/bookingSubmission';
 import {
   validateCoupon,
@@ -408,7 +409,7 @@ Reference ID: ${bookingReferenceId}
 Date Generated: ${submissionTimestamp}
 =====================================================
 
-FROM: Snap Shots Dispatch <bookings@snapshotstudio.com>
+FROM: Snap Shots Dispatch <getursnapshots@gmail.com>
 TO: ${formData.name} <${formData.email || 'Client'}>
 PHONE: ${formData.phone}
 SUBJECT: Confirmed: 🎬 ${formData.service} Shoot with Snap Shots
@@ -447,7 +448,7 @@ ${formData.couponCode ? `• Applied Coupon: ${formData.couponCode} (${formData.
 DISPATCH STATUS:
 Confirmed & Dispatched to Certified Creator Network.
 A dedicated Snap Shots creator will reach out before call-time.
-Tel: +91 90143 19818 | bookings@snapshotstudio.com
+Tel: +91 90143 19818 | getursnapshots@gmail.com
 =====================================================`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -690,7 +691,7 @@ Tel: +91 90143 19818 | bookings@snapshotstudio.com
                       From:
                     </span>
                     <span className="text-zinc-200 font-medium truncate">
-                      Snap Shots Dispatch &lt;<span className="text-zinc-400">bookings@snapshotstudio.com</span>&gt;
+                      Snap Shots Dispatch &lt;<span className="text-zinc-400">getursnapshots@gmail.com</span>&gt;
                     </span>
                   </div>
                   <span className="text-zinc-400 text-[11px] font-mono shrink-0">
@@ -1056,6 +1057,20 @@ Tel: +91 90143 19818 | bookings@snapshotstudio.com
             )}
 
             <form onSubmit={handleSubmit} className="mt-4 sm:mt-6 space-y-3 sm:space-y-4" noValidate>
+              {/* Anti-Spam Honeypot Field (Hidden from humans, traps automated spam bots) */}
+              <div className="hidden opacity-0 absolute -left-[9999px]" aria-hidden="true">
+                <label htmlFor="modal-hp-website">Leave blank</label>
+                <input
+                  type="text"
+                  id="modal-hp-website"
+                  name="website_url"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={(formData as any).website_url || ''}
+                  onChange={handleChange}
+                />
+              </div>
+
               {/* Row 1: Full Name & Phone Number */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>

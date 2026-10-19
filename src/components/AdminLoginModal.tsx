@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Shield,
@@ -10,6 +10,12 @@ import {
   AlertCircle,
   LogOut,
   Sparkles,
+  Mail,
+  RefreshCw,
+  Phone,
+  Calendar,
+  MapPin,
+  Clock,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
@@ -29,6 +35,9 @@ export const AdminLoginModal: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+  const [activeTab, setActiveTab] = useState<'tools' | 'leads'>('tools');
 
   if (!isLoginModalOpen) return null;
 
@@ -76,6 +85,31 @@ export const AdminLoginModal: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const fetchLeads = async () => {
+    setIsLoadingLeads(true);
+    try {
+      const res = await fetch('/api/leads', {
+        headers: {
+          'x-admin-passcode': passcode || 'snapshots2026',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLeads(data.leads || []);
+      }
+    } catch (e) {
+      console.warn('Could not fetch leads:', e);
+    } finally {
+      setIsLoadingLeads(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin && isLoginModalOpen) {
+      fetchLeads();
+    }
+  }, [isAdmin, isLoginModalOpen]);
 
   const handleLogout = async () => {
     setIsLoading(true);
@@ -150,41 +184,139 @@ export const AdminLoginModal: React.FC = () => {
           {/* If already logged in as Admin */}
           {isAdmin ? (
             <div className="space-y-4 py-2">
-              <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                    Admin Privileges Active
-                  </span>
-                </div>
-                {currentUser?.email && (
-                  <p className="text-xs text-zinc-300">
-                    Signed in as: <strong className="text-white">{currentUser.email}</strong>
-                  </p>
-                )}
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  The video slide selector & upload toolbar are unlocked on the website. Scroll down to the Work That Performs section to update videos or paste direct URLs.
-                </p>
+              <div className="flex border-b border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('tools')}
+                  className={`pb-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'tools'
+                      ? 'border-[#bd1616] text-white'
+                      : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  Admin Tools
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('leads');
+                    fetchLeads();
+                  }}
+                  className={`pb-2 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'leads'
+                      ? 'border-[#bd1616] text-white'
+                      : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5 text-[#ffc800]" />
+                  <span>Leads Inbox ({leads.length})</span>
+                </button>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="flex-1 py-2.5 rounded-full bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-                >
-                  Manage Videos Now
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={isLoading}
-                  className="px-4 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white font-bold text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-red-400" />
-                  <span>Log Out</span>
-                </button>
-              </div>
+              {activeTab === 'tools' ? (
+                <>
+                  <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                        Admin Privileges Active
+                      </span>
+                    </div>
+                    {currentUser?.email && (
+                      <p className="text-xs text-zinc-300">
+                        Signed in as: <strong className="text-white">{currentUser.email}</strong>
+                      </p>
+                    )}
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      The video slide selector & upload toolbar are unlocked on the website. Scroll down to the Work That Performs section to update videos or paste direct URLs.
+                    </p>
+                    <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px]">
+                      <span className="text-zinc-400">Leads target:</span>
+                      <strong className="text-[#ffc800]">getursnapshots@gmail.com</strong>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="flex-1 py-2.5 rounded-full bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                    >
+                      Manage Videos Now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={isLoading}
+                      className="px-4 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white font-bold text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-red-400" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] text-zinc-400">
+                      Destination: <strong className="text-[#ffc800]">getursnapshots@gmail.com</strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchLeads}
+                      disabled={isLoadingLeads}
+                      className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isLoadingLeads ? 'animate-spin' : ''}`} />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
+
+                  {leads.length === 0 ? (
+                    <div className="py-8 text-center bg-zinc-900/40 rounded-xl border border-zinc-800 text-xs text-zinc-400">
+                      No leads submitted yet. Test by submitting the booking form!
+                    </div>
+                  ) : (
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                      {leads.map((l: any, idx: number) => (
+                        <div key={l.id || idx} className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs space-y-1.5">
+                          <div className="flex justify-between items-start">
+                            <strong className="text-white font-bold">{l.name}</strong>
+                            <span className="text-[10px] text-zinc-500 font-mono">
+                              {l.submittedAt ? new Date(l.submittedAt).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          <div className="text-zinc-400 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                            {l.phone && <span>📞 {l.phone}</span>}
+                            {l.email && <span>✉️ {l.email}</span>}
+                            <span>🎬 {l.service || 'Shoot'}</span>
+                            {l.date && <span>📅 {l.date}</span>}
+                          </div>
+                          {l.requirements && (
+                            <p className="text-[11px] text-zinc-300 bg-black/40 p-1.5 rounded">
+                              "{l.requirements}"
+                            </p>
+                          )}
+                          <div className="pt-1 flex items-center justify-between text-[10px] text-zinc-500">
+                            <span>Status: {l.status}</span>
+                            <span>Target: {l.deliveredTo || 'getursnapshots@gmail.com'}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('tools')}
+                      className="flex-1 py-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs cursor-pointer"
+                    >
+                      Back to Tools
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Login Form */

@@ -136,7 +136,7 @@ export const ClientLogosSection: React.FC = () => {
               <Star className="w-3.5 h-3.5 fill-[#bd1616]" />
               <Star className="w-3.5 h-3.5 fill-[#bd1616]" />
             </div>
-            <span className="font-semibold text-zinc-300">4.9/5 Rating across 450+ Shoots</span>
+            <span className="font-semibold text-zinc-300">4.5/5 Rating across 50+ Shoots</span>
           </div>
         </div>
 

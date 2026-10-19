@@ -170,8 +170,8 @@ export const Footer: React.FC = () => {
                 <div className="text-zinc-400 text-[11px] mt-0.5">Full RAW clips access</div>
               </div>
               <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs col-span-2 sm:col-span-1">
-                <div className="font-bold text-white text-sm text-[#ffc800]">4.9 ★ Rating</div>
-                <div className="text-zinc-400 text-[11px] mt-0.5">500+ shoots delivered</div>
+                <div className="font-bold text-white text-sm text-[#ffc800]">4.5 ★ Rating</div>
+                <div className="text-zinc-400 text-[11px] mt-0.5">Top client satisfaction</div>
               </div>
             </div>
           </div>

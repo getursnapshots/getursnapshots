@@ -67,8 +67,8 @@ export const bookingConfig = {
   successMessageLine1: 'Thank you for contacting Snap Shots.',
   successMessageLine2: "We've received your booking request and will contact you shortly.",
 
-  // Backend / Email endpoints for future connection (EmailJS, Nodemailer, Google Sheets, Supabase, Firebase, CRM)
-  emailRecipient: 'bookings@snapshotstudio.com',
+  // Backend / Email endpoints for booking leads dispatch
+  emailRecipient: 'getursnapshots@gmail.com',
   webhookUrl: '', // Optional: Endpoint URL for direct form ingestion
 };
 
@@ -84,8 +84,8 @@ export const siteConfig = {
     phone: '+91 90143 19818',
     whatsapp: '+91 90143 19818',
     whatsappMessage: 'Hi Snap Shots, I would like to book a shoot in Telangana / USA!',
-    email: 'bookings@snapshotstudio.com',
-    supportEmail: 'hello@snapshotstudio.com',
+    email: 'getursnapshots@gmail.com',
+    supportEmail: 'getursnapshots@gmail.com',
     instagram: 'https://instagram.com/snapshots_by_abhi',
     instagramHandle: '@snapshots_by_abhi',
     youtube: 'https://youtube.com/@snapshotsreels',
@@ -95,9 +95,9 @@ export const siteConfig = {
   },
 
   stats: [
-    { value: '5,000+', label: 'Reels Delivered' },
-    { value: '1,200+', label: 'Shoots Completed' },
-    { value: '4.9★', label: 'Average Rating' },
+    { value: '50+', label: 'Reels Delivered' },
+    { value: '15+', label: 'Shoots Completed' },
+    { value: '4.5★', label: 'Average Rating' },
   ],
 
   trustBadges: [

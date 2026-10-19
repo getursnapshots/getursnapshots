@@ -158,7 +158,7 @@ export const Testimonials: React.FC = () => {
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs font-medium text-zinc-400">
             <span className="flex items-center gap-1.5">
               <Star className="w-4 h-4 fill-[#bd1616] text-[#bd1616]" />
-              <strong>4.9 / 5 Rating</strong> (500+ Shoots)
+              <strong>4.5 / 5 Rating</strong> (50+ Shoots)
             </span>
             <span className="text-zinc-600 hidden sm:inline">&bull;</span>
             <span className="text-zinc-300">

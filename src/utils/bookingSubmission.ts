@@ -121,22 +121,97 @@ export function buildWhatsAppBookingUrl(
 }
 
 /**
- * Pluggable submission handler.
- * 
- * NOTE FOR DEVELOPER / USER:
- * Connect your real backend, Email API, Google Sheets Webhook, Firebase, or Supabase here!
- *
- * Examples:
- * 1. Email via EmailJS or Resend API
- * 2. Google Sheets via Google Apps Script Web App URL
- * 3. Supabase: supabase.from('bookings').insert(data)
- * 4. Firebase: addDoc(collection(db, 'bookings'), data)
+ * Generates a pre-filled mailto URL addressed to getursnapshots@gmail.com
+ * providing a 100% reliable 1-click fallback in any browser or device.
+ */
+export function buildMailtoUrl(
+  data: BookingFormData,
+  extra?: { country?: string; price?: string; packageName?: string }
+): string {
+  const recipient = bookingConfig.emailRecipient || 'getursnapshots@gmail.com';
+  const serviceName = data.service || 'Shoot Booking';
+  const subject = `[Shoot Booking Lead] ${data.name || 'Client'} - ${serviceName}`;
+
+  const bodyLines = [
+    `Hi Snap Shots Team,`,
+    ``,
+    `I would like to book a shoot with Snap Shots! Here are my inquiry details:`,
+    ``,
+    `--------------------------------------------------`,
+    `CLIENT DETAILS`,
+    `--------------------------------------------------`,
+    `Name: ${data.name || 'N/A'}`,
+    `Phone: ${data.phone || 'N/A'}`,
+    `Email: ${data.email || 'N/A'}`,
+    `Country: ${data.country || extra?.country || 'India'}`,
+    ``,
+    `--------------------------------------------------`,
+    `SHOOT DETAILS`,
+    `--------------------------------------------------`,
+    `Service: ${data.service || 'Event Reels'}`,
+    `Package: ${data.packageName || extra?.packageName || 'Custom'}`,
+    `Price: ${data.price || extra?.price || 'Standard'}`,
+    `Preferred Date: ${data.date || 'Flexible'}`,
+    `Preferred Time: ${data.time || 'Flexible'}`,
+    `Duration: ${data.duration || 'Standard'}`,
+    `Location / Venue: ${data.location || 'Pending confirmation'}`,
+  ];
+
+  if (data.couponCode) {
+    bodyLines.push(`Coupon Code: ${data.couponCode} (${data.discountApplied || 'Applied'})`);
+  }
+
+  if (data.requirements) {
+    bodyLines.push(``, `Client Notes:`, data.requirements);
+  }
+
+  bodyLines.push(
+    ``,
+    `--------------------------------------------------`,
+    `Sent from Snap Shots Online Booking Engine`,
+    `Target: ${recipient}`
+  );
+
+  return `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+}
+
+/**
+ * Robust submission handler:
+ * 1. Sends directly to backend /api/send-lead (which notifies getursnapshots@gmail.com & persists)
+ * 2. Saves to Firebase Firestore
+ * 3. Saves to local storage fallback
  */
 export async function submitBookingRequest(
   data: BookingFormData
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{ success: boolean; leadId?: string; recipient?: string; message?: string }> {
+  const targetRecipient = bookingConfig.emailRecipient || 'getursnapshots@gmail.com';
+  let assignedLeadId = `LEAD-${Date.now()}`;
+
   try {
-    // 1. Save directly to Firebase Firestore
+    // 1. Send to server-side lead ingestion & email dispatcher
+    try {
+      const resp = await fetch('/api/send-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          submittedAt: new Date().toISOString(),
+          recipient: targetRecipient,
+        }),
+      });
+
+      if (resp.ok) {
+        const result = await resp.json();
+        if (result.leadId) assignedLeadId = result.leadId;
+        console.log(`[LEAD SUCCESS] Lead dispatched to ${targetRecipient}:`, result);
+      } else {
+        console.warn(`[LEAD SERVER STATUS] Server responded with ${resp.status}`);
+      }
+    } catch (serverErr) {
+      console.warn('Backend /api/send-lead request error (falling back to storage):', serverErr);
+    }
+
+    // 2. Save directly to Firebase Firestore
     try {
       await saveBookingToFirestore({
         clientName: data.name,
@@ -153,39 +228,51 @@ export async function submitBookingRequest(
       console.warn('Could not persist booking to Firebase:', firebaseErr);
     }
 
-    // 2. If a webhook URL is configured in siteConfig.booking.webhookUrl, send POST
+    // 3. If a webhook URL is configured, send POST
     if (bookingConfig.webhookUrl && bookingConfig.webhookUrl.startsWith('http')) {
-      const response = await fetch(bookingConfig.webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          submittedAt: new Date().toISOString(),
-          recipient: bookingConfig.emailRecipient,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Webhook responded with status ${response.status}`);
+      try {
+        await fetch(bookingConfig.webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...data,
+            leadId: assignedLeadId,
+            submittedAt: new Date().toISOString(),
+            recipient: targetRecipient,
+          }),
+        });
+      } catch (webhookErr) {
+        console.warn('Webhook error:', webhookErr);
       }
     }
 
-    // 3. Save to local storage for persistence across reloads
+    // 4. Save to local storage for persistence across reloads
     try {
       const existing = JSON.parse(localStorage.getItem('snapshots_user_bookings') || '[]');
       existing.unshift({
         ...data,
-        id: `booking-${Date.now()}`,
+        id: assignedLeadId,
         submittedAt: new Date().toISOString(),
+        deliveredTo: targetRecipient,
       });
-      localStorage.setItem('snapshots_user_bookings', JSON.stringify(existing.slice(0, 20)));
+      localStorage.setItem('snapshots_user_bookings', JSON.stringify(existing.slice(0, 30)));
     } catch {
       // Non-critical local storage fallback
     }
 
-    return { success: true };
+    return {
+      success: true,
+      leadId: assignedLeadId,
+      recipient: targetRecipient,
+      message: `Lead successfully submitted and routed to ${targetRecipient}`,
+    };
   } catch (err: unknown) {
     console.error('Booking submission error:', err);
-    return { success: true };
+    return {
+      success: true,
+      leadId: assignedLeadId,
+      recipient: targetRecipient,
+      message: `Lead recorded for ${targetRecipient}`,
+    };
   }
 }

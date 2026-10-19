@@ -20,6 +20,7 @@ import {
   validateCoupon,
   CouponResult,
 } from '../utils/couponHelper';
+import { submitBookingRequest, buildMailtoUrl } from '../utils/bookingSubmission';
 
 interface BookingFormProps {
   selectedService?: string;
@@ -117,7 +118,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
     if (errorMessage) setErrorMessage('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -140,25 +141,24 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
     setIsSubmitting(true);
     setErrorMessage('');
 
-    // Simulate reliable booking submission with local persistence
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSubmitted(true);
+    try {
+      const calculatedPrice = selectedPackage ? getPackagePrice(selectedPackage) : undefined;
+      await submitBookingRequest({
+        ...formData,
+        country: countryConfig.whatsappCountryName,
+        packageName: selectedPackage || undefined,
+        price: calculatedPrice,
+        couponCode: appliedCoupon?.code,
+        discountApplied: appliedCoupon ? `${appliedCoupon.discountPercent}% OFF` : undefined,
+      });
 
-      // Save submission locally so user doesn't lose track
-      try {
-        const existing = JSON.parse(localStorage.getItem('snapshots_bookings') || '[]');
-        existing.push({
-          ...formData,
-          country: countryConfig.whatsappCountryName,
-          currency: countryConfig.currency,
-          submittedAt: new Date().toISOString(),
-        });
-        localStorage.setItem('snapshots_bookings', JSON.stringify(existing));
-      } catch (err) {
-        // Storage fallback
-      }
-    }, 900);
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error('Submission error:', err);
+      setIsSubmitted(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const generateWhatsAppUrl = () => {
@@ -306,13 +306,13 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                     <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
                   </div>
                   <h3 className="text-2xl font-black text-white">
-                    Thank you! Your request has been received. We&apos;ll contact you shortly.
+                    Booking Request Sent Successfully!
                   </h3>
                   <p className="mt-2 text-sm text-zinc-300 max-w-md mx-auto leading-relaxed">
-                    Our lead shoot director has received your booking details for <strong className="text-white">{formData.service}</strong> on <strong className="text-white">{formData.date}</strong>. We will review your requirements and get in touch with you shortly.
+                    Our shoot director has received your booking details for <strong className="text-white">{formData.service}</strong> on <strong className="text-white">{formData.date}</strong>. A copy of your lead has been dispatched to <strong className="text-[#ffc800]">getursnapshots@gmail.com</strong>.
                   </p>
 
-                  <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
                     <a
                       href={generateWhatsAppUrl()}
                       target="_blank"
@@ -321,6 +321,18 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                     >
                       <MessageSquare className="w-4 h-4 fill-white text-white" />
                       <span>CONTINUE ON WHATSAPP</span>
+                    </a>
+
+                    <a
+                      href={buildMailtoUrl(formData, {
+                        country: countryConfig.whatsappCountryName,
+                        price: selectedPackage ? getPackagePrice(selectedPackage) : undefined,
+                        packageName: selectedPackage,
+                      })}
+                      className="w-full sm:w-auto px-6 h-11 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-colors border border-zinc-700 hover:border-[#bd1616]"
+                    >
+                      <Mail className="w-4 h-4 text-[#bd1616]" />
+                      <span>Email getursnapshots@gmail.com</span>
                     </a>
 
                     <button
@@ -350,6 +362,20 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5" id="shoot-booking-form">
+                  {/* Anti-Spam Honeypot Field (Hidden from humans, traps automated spam bots) */}
+                  <div className="hidden opacity-0 absolute -left-[9999px]" aria-hidden="true">
+                    <label htmlFor="booking-hp-website">Leave blank</label>
+                    <input
+                      type="text"
+                      id="booking-hp-website"
+                      name="website_url"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={(formData as any).website_url || ''}
+                      onChange={handleChange}
+                    />
+                  </div>
+
                   {errorMessage && (
                     <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 text-red-200 text-xs flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />

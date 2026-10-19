@@ -27,7 +27,7 @@ service cloud.firestore {
              (!('package' in data) || (data['package'] is string && data['package'].size() <= 100)) &&
              (!('eventDate' in data) || (data.eventDate is string && data.eventDate.size() <= 50)) &&
              (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
-             (!('country' in data) || (data.country is string && data.country.size() <= 10)) &&
+             (!('country' in data) || (data.country is string && data.country.size() <= 80)) &&
              (!('requirements' in data) || (data.requirements is string && data.requirements.size() <= 5000)) &&
              (!('status' in data) || (data.status is string && (data.status == 'pending' || data.status == 'confirmed' || data.status == 'completed' || data.status == 'cancelled')));
     }

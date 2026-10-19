@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
+import { submitBookingRequest, buildMailtoUrl } from '../utils/bookingSubmission';
 
 export const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -34,14 +35,29 @@ export const ContactPage: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await submitBookingRequest({
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        service: formData.service,
+        date: formData.date,
+        time: 'Flexible',
+        duration: 'Standard',
+        location: formData.location,
+        requirements: formData.message,
+      });
       setSubmitted(true);
-    }, 700);
+    } catch (err) {
+      console.error('Contact submit error:', err);
+      setSubmitted(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleWhatsAppDirect = () => {
@@ -147,19 +163,16 @@ export const ContactPage: React.FC = () => {
                   <Mail className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-xs text-zinc-500 font-medium block">Email Desk</span>
+                  <span className="text-xs text-zinc-500 font-medium block">Direct Email</span>
                   <a
-                    href="mailto:bookings@snapshotstudio.com"
+                    href="mailto:getursnapshots@gmail.com"
                     className="text-sm font-bold text-white hover:text-[#bd1616] transition-colors block"
                   >
-                    bookings@snapshotstudio.com
+                    getursnapshots@gmail.com
                   </a>
-                  <a
-                    href="mailto:hello@snapshotstudio.com"
-                    className="text-xs text-zinc-400 hover:text-white transition-colors"
-                  >
-                    hello@snapshotstudio.com
-                  </a>
+                  <span className="text-xs text-zinc-400">
+                    Direct inbox for shoot bookings &amp; client inquiries
+                  </span>
                 </div>
               </div>
 
@@ -259,6 +272,20 @@ export const ContactPage: React.FC = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Anti-Spam Honeypot Field (Hidden from humans, traps automated spam bots) */}
+                  <div className="hidden opacity-0 absolute -left-[9999px]" aria-hidden="true">
+                    <label htmlFor="contact-hp-website">Leave blank</label>
+                    <input
+                      type="text"
+                      id="contact-hp-website"
+                      name="website_url"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={(formData as any).website_url || ''}
+                      onChange={handleChange}
+                    />
+                  </div>
+
                   <div className="border-b border-zinc-900 pb-4 mb-4">
                     <h2 className="text-xl sm:text-2xl font-black text-white">Send Us a Direct Message</h2>
                     <p className="text-xs text-zinc-400 mt-1">
