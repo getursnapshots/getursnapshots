@@ -2,7 +2,7 @@
 
 Place your MP4 video files into this directory (`/public/videos/`).
 
-## Recommended Filenames:
+## Active Reel Filenames:
 - `reel-1.mp4` (Displayed on Slide 1)
 - `reel-2.mp4` (Displayed on Slide 2)
 - `reel-3.mp4` (Displayed on Slide 3)

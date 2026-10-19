@@ -13,11 +13,11 @@ import { ReelWorkItem } from '../types';
 import { getResponsiveImageSrcSet } from '../utils/imageUtils';
 
 const defaultFallbackVideos = [
+  '/videos/reel-1.mp4',
+  '/videos/reel-2.mp4',
+  '/videos/reel-3.mp4',
   '/videos/reel-4.mp4',
-  '/videos/reel-6.mp4',
-  '/videos/reel-8.mp4',
-  '/videos/reel-9.mp4',
-  '/videos/reel-10.mp4',
+  '/videos/reel-5.mp4',
 ];
 
 interface VideoLightboxProps {

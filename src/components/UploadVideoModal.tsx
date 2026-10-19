@@ -265,7 +265,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({
               </div>
 
               <div className="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 text-[11px] text-zinc-400 leading-relaxed">
-                💡 <strong className="text-zinc-200">How to upload your own videos:</strong> Place your MP4 files directly into the <code className="text-zinc-200 bg-black/60 px-1 py-0.5 rounded">public/videos/</code> folder named <code className="text-zinc-200 bg-black/60 px-1 py-0.5 rounded">reel-1.mp4</code>, <code className="text-zinc-200 bg-black/60 px-1 py-0.5 rounded">reel-2.mp4</code> ... up to <code className="text-zinc-200 bg-black/60 px-1 py-0.5 rounded">reel-10.mp4</code>. Once placed, push to GitHub for live Vercel deployment!
+                💡 <strong className="text-zinc-200">How to upload your own videos:</strong> Place your MP4 files directly into the <code className="text-zinc-200 bg-black/60 px-1 py-0.5 rounded">public/videos/</code> folder named <code className="text-zinc-200 bg-black/60 px-1 py-0.5 rounded">reel-1.mp4</code> through <code className="text-zinc-200 bg-black/60 px-1 py-0.5 rounded">reel-5.mp4</code>. Once placed, push to GitHub for live Vercel deployment!
               </div>
             </div>
           ) : (

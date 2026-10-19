@@ -403,8 +403,9 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     };
   }, []);
 
-  // Map reels: Filter to only slides with active videos (slides 1, 2, 5 & 7 removed)
+  // Map reels: Strictly display 5 videos (reel-1.mp4 through reel-5.mp4)
   const filteredReels: ReelWorkItem[] = siteConfig.portfolioReels
+    .slice(0, 5)
     .map((reel, idx) => {
       const replacement = replacedBySlide[idx];
       const cleanReelPoster = reel.posterUrl && !reel.posterUrl.includes('unsplash.com') ? reel.posterUrl : undefined;
@@ -425,7 +426,8 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
         posterUrl: cleanReelPoster,
       };
     })
-    .filter((reel) => Boolean(reel.videoUrl && reel.videoUrl.trim() !== ''));
+    .filter((reel) => Boolean(reel.videoUrl && reel.videoUrl.trim() !== ''))
+    .slice(0, 5);
 
   const totalSlides = filteredReels.length;
 

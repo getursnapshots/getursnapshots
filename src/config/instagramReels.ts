@@ -4,7 +4,7 @@
  * ============================================================================
  * Direct video links configured strictly to read the user's uploaded MP4
  * files from `/videos/` directory without Instagram reel links.
- * Kept slides: reel-4, reel-6, reel-8, reel-9, reel-10.
+ * Exactly 5 slides: reel-1.mp4, reel-2.mp4, reel-3.mp4, reel-4.mp4, reel-5.mp4.
  */
 
 export interface InstagramReelItem {

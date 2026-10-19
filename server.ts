@@ -288,7 +288,8 @@ async function startServer() {
       if (slides && typeof slides === 'object') {
         const cleanSlides: Record<string, any> = {};
         for (const [k, v] of Object.entries(slides as Record<string, any>)) {
-          if (v && v.videoUrl && !v.videoUrl.startsWith('blob:')) {
+          const numK = Number(k);
+          if (numK >= 0 && numK < 5 && v && v.videoUrl && !v.videoUrl.startsWith('blob:')) {
             cleanSlides[k] = v;
           }
         }
