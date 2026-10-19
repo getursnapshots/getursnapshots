@@ -34,7 +34,6 @@ const getFormattedTime = () => {
 
 export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [unreadBadge, setUnreadBadge] = useState(1);
   const [isTyping, setIsTyping] = useState(false);
@@ -70,19 +69,6 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
       time: '13:23',
     },
   ]);
-
-  // Mobile: Automatically pop up after 1.5s as requested
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile && !hasAutoOpened) {
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-        setHasAutoOpened(true);
-        setUnreadBadge(0);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [hasAutoOpened]);
 
   // Scroll to latest message
   useEffect(() => {
@@ -207,8 +193,12 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
               <div className="relative">
                 <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center p-0.5 shadow-xs">
                   {/* Brand Icon for Snap Shots */}
-                  <div className="w-5 h-5 rounded-full bg-[#bd1616] flex items-center justify-center text-white font-black text-[9px] tracking-tight">
-                    SS
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center overflow-hidden">
+                    <img
+                      src="/favicon.png"
+                      alt="Snap Shots"
+                      className="w-full h-full object-cover rounded-full"
+                    />
                   </div>
                 </div>
                 {/* Active Online Green Dot */}

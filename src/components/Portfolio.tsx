@@ -32,11 +32,11 @@ interface PortfolioProps {
  * When a video comes to the middle, it plays; when it leaves the middle, it pauses.
  */
 const defaultFallbackVideos = [
+  '/videos/reel-1.mp4',
+  '/videos/reel-2.mp4',
+  '/videos/reel-3.mp4',
   '/videos/reel-4.mp4',
-  '/videos/reel-6.mp4',
-  '/videos/reel-8.mp4',
-  '/videos/reel-9.mp4',
-  '/videos/reel-10.mp4',
+  '/videos/reel-5.mp4',
 ];
 
 interface VideoSlideCardProps {
@@ -79,7 +79,7 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
   );
   const resolvedVideoUrl = isDirectFile
     ? videoUrl
-    : defaultFallbackVideos[(slideNumber - 1) % defaultFallbackVideos.length] || '/videos/reel-4.mp4';
+    : defaultFallbackVideos[(slideNumber - 1) % defaultFallbackVideos.length] || '/videos/reel-1.mp4';
 
   // Reset loading state if video source URL changes
   useEffect(() => {
@@ -300,7 +300,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
             v?.videoUrl &&
             !v.videoUrl.startsWith('blob:') &&
             !v.videoUrl.includes('/assets/uploads/') &&
-            !v.videoUrl.includes('reel-3.mp4') &&
             !v.videoUrl.includes('instagram.com')
           ) {
             clean[Number(k)] = v;
@@ -339,7 +338,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
                   val?.videoUrl &&
                   !val.videoUrl.startsWith('blob:') &&
                   !val.videoUrl.includes('/assets/uploads/') &&
-                  !val.videoUrl.includes('reel-3.mp4') &&
                   !val.videoUrl.includes('instagram.com')
                 ) {
                   parsed[numKey] = {
@@ -377,7 +375,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
         if (isMounted && Object.keys(firestoreSlides).length > 0) {
           const cleanFirestore: Record<number, { videoUrl: string; posterUrl?: string }> = {};
           Object.entries(firestoreSlides).forEach(([k, v]) => {
-            if (v?.videoUrl && !v.videoUrl.includes('/assets/uploads/') && !v.videoUrl.includes('reel-3.mp4')) {
+            if (v?.videoUrl && !v.videoUrl.includes('/assets/uploads/')) {
               cleanFirestore[Number(k)] = v;
             }
           });
