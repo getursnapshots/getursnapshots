@@ -9,21 +9,22 @@ import {
   User,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { auth, googleAuthProvider } from '../config/firebase';
 import { isAiStudioEnvironment } from '../utils/aiStudioEnv';
 
-// Default owner access passcodes
-const VALID_PASSCODES = ['snapshots2026', 'admin123', 'snapshots', 'admin'];
-
-interface AdminAuthContextType {
+// Passcode login has been deprecated in production in favor of secure Firebase Auth
+export interface AdminAuthContextType {
   isAdmin: boolean;
   currentUser: User | null;
   isLoginModalOpen: boolean;
   setIsLoginModalOpen: (open: boolean) => void;
-  loginWithPasscode: (passcode: string) => { success: boolean; error?: string };
+  loginWithEmailPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  loginWithPasscode: (passcode: string) => { success: boolean; error?: string };
+  getIdToken: () => Promise<string | null>;
   logout: () => Promise<void>;
 }
 
@@ -66,16 +67,42 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
     } catch {}
   }, []);
 
-  const loginWithPasscode = (passcode: string) => {
-    const clean = passcode.trim().toLowerCase();
-    if (VALID_PASSCODES.includes(clean)) {
-      setIsAdmin(true);
-      try {
-        localStorage.setItem('snapshots_ai_studio_mode', 'true');
-      } catch {}
-      return { success: true };
+  const loginWithPasscode = (_passcode: string) => {
+    return {
+      success: false,
+      error: 'Passcode authentication has been retired. Please sign in with your Firebase admin email and password.',
+    };
+  };
+
+  const loginWithEmailPassword = async (email: string, password: string) => {
+    try {
+      const res = await signInWithEmailAndPassword(auth, email.trim(), password);
+      if (res.user) {
+        setIsAdmin(true);
+        try {
+          localStorage.setItem('snapshots_ai_studio_mode', 'true');
+        } catch {}
+        return { success: true };
+      }
+      return { success: false, error: 'Authentication failed.' };
+    } catch (err: any) {
+      console.error('Email Sign-In Error:', err);
+      let errorMsg = 'Invalid email or password.';
+      if (
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/invalid-credential'
+      ) {
+        errorMsg = 'Invalid email or password.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMsg = 'Too many failed login attempts. Please try again later.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMsg = 'Please enter a valid email address.';
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      return { success: false, error: errorMsg };
     }
-    return { success: false, error: 'Incorrect admin passcode. Try "snapshots2026" or "admin123"' };
   };
 
   const loginWithGoogle = async () => {
@@ -93,6 +120,13 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.error('Google Sign-In Error:', err);
       return { success: false, error: err.message || 'Google authentication failed' };
     }
+  };
+
+  const getIdToken = async (): Promise<string | null> => {
+    if (auth.currentUser) {
+      return auth.currentUser.getIdToken(true);
+    }
+    return null;
   };
 
   const logout = async () => {
@@ -115,8 +149,10 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
         currentUser,
         isLoginModalOpen,
         setIsLoginModalOpen,
-        loginWithPasscode,
+        loginWithEmailPassword,
         loginWithGoogle,
+        loginWithPasscode,
+        getIdToken,
         logout,
       }}
     >

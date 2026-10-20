@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
 import compression from 'compression';
+import { processLeadSubmission, fetchAdminLeads } from './server/leadService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -346,239 +347,26 @@ async function startServer() {
     }
   });
 
-  // API endpoint 6: Send & record booking lead directly to getursnapshots@gmail.com with anti-bot defense
+  // API endpoint 6: Send & record booking lead to Firestore with deduplication, anti-bot defense & SMTP
   app.post('/api/send-lead', leadSubmissionLimiter, async (req, res) => {
     try {
-      const {
-        name,
-        phone,
-        email,
-        service,
-        packageName,
-        price,
-        date,
-        time,
-        duration,
-        location,
-        country,
-        couponCode,
-        discountApplied,
-        requirements,
-        message,
-        source = 'Booking Form',
-        // Anti-bot honeypot fields
-        website_url,
-        hp_field,
-      } = req.body;
-
-      // Bot protection: if automated bot filled invisible honeypot, reject silently
-      if (website_url || hp_field) {
-        console.warn(`[BOT BLOCKED] Dropped automated spam submission with honeypot triggered.`);
-        return res.json({
-          success: true,
-          leadId: 'SPAM_FILTERED',
-          recipient: 'getursnapshots@gmail.com',
-          message: 'Received',
-        });
-      }
-
-      // Input sanitization (strip HTML / script tags and limit length)
-      const sanitize = (val: any, maxLen = 300) => {
-        if (typeof val !== 'string') return '';
-        return val.replace(/<[^>]*>?/gm, '').trim().slice(0, maxLen);
-      };
-
-      const cleanName = sanitize(name, 120);
-      const cleanPhone = sanitize(phone, 35);
-      const cleanEmail = sanitize(email, 120);
-      const cleanService = sanitize(service, 100);
-      const cleanPackageName = sanitize(packageName, 100);
-      const cleanPrice = sanitize(price, 40);
-      const cleanDate = sanitize(date, 50);
-      const cleanTime = sanitize(time, 50);
-      const cleanDuration = sanitize(duration, 50);
-      const cleanLocation = sanitize(location, 150);
-      const cleanCountry = sanitize(country, 60);
-      const cleanCouponCode = sanitize(couponCode, 30);
-      const cleanDiscount = sanitize(discountApplied, 30);
-      const cleanRequirements = sanitize(requirements || message, 2000);
-
-      if (!cleanName || (!cleanPhone && !cleanEmail)) {
-        return res.status(400).json({ error: 'Name and either phone or email are required' });
-      }
-
-      const targetEmail = process.env.LEADS_EMAIL || 'getursnapshots@gmail.com';
-      const timestamp = new Date().toISOString();
-      const leadId = `LEAD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      const leadRecord = {
-        id: leadId,
-        source,
-        name: cleanName,
-        phone: cleanPhone,
-        email: cleanEmail,
-        service: cleanService || 'General Shoot',
-        packageName: cleanPackageName || 'Custom',
-        price: cleanPrice,
-        date: cleanDate || 'Flexible',
-        time: cleanTime,
-        duration: cleanDuration,
-        location: cleanLocation,
-        country: cleanCountry || 'India',
-        couponCode: cleanCouponCode,
-        discountApplied: cleanDiscount,
-        requirements: cleanRequirements,
-        submittedAt: timestamp,
-        deliveredTo: targetEmail,
-        status: 'new',
-      };
-
-      // 1. Save permanently to data/leads.json
-      let existingLeads: any[] = [];
-      try {
-        if (fs.existsSync(leadsFilePath)) {
-          existingLeads = JSON.parse(fs.readFileSync(leadsFilePath, 'utf-8'));
-        }
-      } catch (e) {
-        existingLeads = [];
-      }
-      existingLeads.unshift(leadRecord);
-      fs.writeFileSync(leadsFilePath, JSON.stringify(existingLeads, null, 2), 'utf-8');
-
-      // Sync to dist/data if dist exists
-      try {
-        const distDataDir = path.resolve(__dirname, 'dist/data');
-        if (fs.existsSync(distDataDir)) {
-          fs.writeFileSync(path.join(distDataDir, 'leads.json'), JSON.stringify(existingLeads, null, 2), 'utf-8');
-        }
-      } catch {}
-
-      console.log(`[LEAD RECEIVED] Lead #${leadId} from "${name}" (${phone || email}) for "${service}". Target: ${targetEmail}`);
-
-      // 2. Dispatch real email via SMTP if credentials are configured in environment
-      let emailSent = false;
-      let emailError: string | null = null;
-
-      const smtpUser = process.env.SMTP_USER || process.env.GMAIL_USER;
-      const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD;
-      const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-      const smtpPort = Number(process.env.SMTP_PORT || 465);
-
-      if (smtpUser && smtpPass) {
-        try {
-          const transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: smtpPort,
-            secure: smtpPort === 465,
-            auth: {
-              user: smtpUser,
-              pass: smtpPass,
-            },
-          });
-
-          const mailHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; border: 1px solid #e4e4e7; border-radius: 12px; background-color: #ffffff; color: #18181b;">
-              <div style="background-color: #bd1616; padding: 18px 24px; border-radius: 8px 8px 0 0; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px;">SNAP SHOTS &mdash; NEW BOOKING LEAD</h1>
-                <p style="color: #fecaca; margin: 4px 0 0 0; font-size: 13px;">Lead ID: ${leadId}</p>
-              </div>
-
-              <div style="padding: 24px 8px;">
-                <h2 style="font-size: 17px; margin-top: 0; color: #18181b; border-bottom: 2px solid #bd1616; padding-bottom: 8px;">Client Information</h2>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                  <tr><td style="padding: 8px 0; font-weight: bold; width: 140px; color: #71717a;">Client Name:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600; color: #18181b;">${name}</td></tr>
-                  <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Phone Number:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;"><a href="tel:${phone}" style="color: #bd1616; text-decoration: none;">${phone || 'Not provided'}</a></td></tr>
-                  <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Email Address:</td><td style="padding: 8px 0; font-size: 15px;"><a href="mailto:${email}" style="color: #bd1616; text-decoration: none;">${email || 'Not provided'}</a></td></tr>
-                  <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Country:</td><td style="padding: 8px 0; font-size: 15px;">${country || 'India'}</td></tr>
-                </table>
-
-                <h2 style="font-size: 17px; margin-top: 0; color: #18181b; border-bottom: 2px solid #bd1616; padding-bottom: 8px;">Shoot Requirements</h2>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                  <tr><td style="padding: 8px 0; font-weight: bold; width: 140px; color: #71717a;">Service:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600; color: #bd1616;">${service || 'Event Reels'}</td></tr>
-                  ${packageName ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Package:</td><td style="padding: 8px 0; font-size: 15px;">${packageName}</td></tr>` : ''}
-                  ${price ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Selected Price:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${price}</td></tr>` : ''}
-                  <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Preferred Date:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${date || 'Flexible'}</td></tr>
-                  ${time ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Preferred Time:</td><td style="padding: 8px 0; font-size: 15px;">${time}</td></tr>` : ''}
-                  ${duration ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Duration:</td><td style="padding: 8px 0; font-size: 15px;">${duration}</td></tr>` : ''}
-                  ${location ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Shoot Location:</td><td style="padding: 8px 0; font-size: 15px;">${location}</td></tr>` : ''}
-                  ${couponCode ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Coupon Applied:</td><td style="padding: 8px 0; font-size: 15px; color: #15803d; font-weight: bold;">${couponCode} (${discountApplied || 'Applied'})</td></tr>` : ''}
-                </table>
-
-                ${(requirements || message) ? `
-                  <h2 style="font-size: 17px; margin-top: 0; color: #18181b; border-bottom: 2px solid #bd1616; padding-bottom: 8px;">Client Notes / Instructions</h2>
-                  <div style="background-color: #f4f4f5; padding: 14px 18px; border-radius: 8px; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-                    ${requirements || message}
-                  </div>
-                ` : ''}
-
-                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e4e4e7;">
-                  <a href="https://wa.me/${(phone || '').replace(/[^0-9]/g, '')}" style="display: inline-block; background-color: #25D366; color: #ffffff; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px; margin-right: 10px;">
-                    Reply via WhatsApp
-                  </a>
-                  <a href="mailto:${email || targetEmail}" style="display: inline-block; background-color: #bd1616; color: #ffffff; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
-                    Reply via Email
-                  </a>
-                </div>
-              </div>
-
-              <div style="background-color: #f4f4f5; padding: 14px; text-align: center; font-size: 12px; color: #71717a; border-radius: 0 0 8px 8px;">
-                This lead was captured live by Snap Shots Visual Media Studio booking engine.<br/>
-                Destination Inbox: <strong>${targetEmail}</strong> &bull; Received at ${new Date(timestamp).toLocaleString()}
-              </div>
-            </div>
-          `;
-
-          await transporter.sendMail({
-            from: `"Snap Shots Booking Engine" <${smtpUser}>`,
-            to: targetEmail,
-            replyTo: email || undefined,
-            subject: `🎬 New Shoot Lead: ${name} (${service || 'Event Reels'})`,
-            html: mailHtml,
-            text: `New Shoot Booking Lead:\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nService: ${service}\nPackage: ${packageName || 'Custom'}\nDate: ${date}\nTime: ${time}\nLocation: ${location}\nNotes: ${requirements || message}\nDelivered to: ${targetEmail}`,
-          });
-
-          emailSent = true;
-          console.log(`[SMTP SUCCESS] Automated email dispatched to ${targetEmail} for lead #${leadId}`);
-        } catch (err: any) {
-          emailError = err.message || 'SMTP error';
-          console.warn(`[SMTP NOTICE] Could not send via SMTP (${emailError}). Lead is safely persisted in data/leads.json.`);
-        }
-      } else {
-        console.log(`[LEAD READY] Lead saved to data/leads.json! Set SMTP_USER & SMTP_PASS in environment variables to enable live automated SMTP dispatch to ${targetEmail}.`);
-      }
-
-      return res.json({
-        success: true,
-        leadId,
-        recipient: targetEmail,
-        emailSent,
-        emailNotice: emailSent
-          ? 'Email dispatched to getursnapshots@gmail.com'
-          : 'Lead saved and queued for getursnapshots@gmail.com',
-        timestamp,
-      });
+      const result = await processLeadSubmission(req.body);
+      return res.status(result.statusCode).json(result.body);
     } catch (err: any) {
       console.error('Error handling lead submission:', err);
       return res.status(500).json({ error: err.message || 'Failed to submit lead' });
     }
   });
 
-  // API endpoint 7: Retrieve all leads (protected: admin passcode or local development)
-  app.get('/api/leads', (req, res) => {
+  // API endpoint 7: Retrieve all leads from Firestore (protected: Firebase Auth ID token & admin allowlist)
+  app.get('/api/leads', async (req, res) => {
     try {
-      const passcode = req.headers['x-admin-passcode'] || req.query.passcode;
-      const isLocalOrDev = process.env.NODE_ENV !== 'production' || req.headers['host']?.includes('localhost');
-      if (!isLocalOrDev && passcode !== 'snapshots2026') {
-        return res.status(403).json({ error: 'Unauthorized: Admin passcode required' });
-      }
-
-      if (fs.existsSync(leadsFilePath)) {
-        const data = JSON.parse(fs.readFileSync(leadsFilePath, 'utf-8'));
-        return res.json({ success: true, count: data.length, leads: data });
-      }
-      return res.json({ success: true, count: 0, leads: [] });
+      const authHeader = req.headers.authorization || (req.headers.Authorization as string);
+      const result = await fetchAdminLeads(authHeader);
+      return res.status(result.statusCode).json(result.body);
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      console.error('Error retrieving leads:', err);
+      return res.status(500).json({ error: err.message || 'Failed to retrieve leads' });
     }
   });
 

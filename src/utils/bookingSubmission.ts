@@ -189,12 +189,14 @@ export async function submitBookingRequest(
 
   try {
     // 1. Send to server-side lead ingestion & email dispatcher
+    let serverSaved = false;
     try {
       const resp = await fetch('/api/send-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
+          leadId: assignedLeadId,
           submittedAt: new Date().toISOString(),
           recipient: targetRecipient,
         }),
@@ -203,6 +205,7 @@ export async function submitBookingRequest(
       if (resp.ok) {
         const result = await resp.json();
         if (result.leadId) assignedLeadId = result.leadId;
+        serverSaved = true;
         console.log(`[LEAD SUCCESS] Lead dispatched to ${targetRecipient}:`, result);
       } else {
         console.warn(`[LEAD SERVER STATUS] Server responded with ${resp.status}`);
@@ -211,21 +214,23 @@ export async function submitBookingRequest(
       console.warn('Backend /api/send-lead request error (falling back to storage):', serverErr);
     }
 
-    // 2. Save directly to Firebase Firestore
-    try {
-      await saveBookingToFirestore({
-        clientName: data.name,
-        phone: data.phone,
-        email: data.email || undefined,
-        service: data.service,
-        package: data.packageName || undefined,
-        eventDate: data.date,
-        city: data.location || undefined,
-        country: data.country || undefined,
-        requirements: data.requirements || undefined,
-      });
-    } catch (firebaseErr) {
-      console.warn('Could not persist booking to Firebase:', firebaseErr);
+    // 2. Client-side Firestore fallback only if server endpoint was unreachable
+    if (!serverSaved) {
+      try {
+        await saveBookingToFirestore({
+          clientName: data.name,
+          phone: data.phone,
+          email: data.email || undefined,
+          service: data.service,
+          package: data.packageName || undefined,
+          eventDate: data.date,
+          city: data.location || undefined,
+          country: data.country || undefined,
+          requirements: data.requirements || undefined,
+        });
+      } catch (firebaseErr) {
+        console.warn('Could not persist booking to Firebase fallback:', firebaseErr);
+      }
     }
 
     // 3. If a webhook URL is configured, send POST
