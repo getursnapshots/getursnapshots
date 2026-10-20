@@ -45,6 +45,8 @@ interface VideoSlideCardProps {
   isCenter: boolean;
   isPlaying: boolean;
   isMuted: boolean;
+  isCarouselInView: boolean;
+  diff: number;
   title?: string;
   category?: string;
   instagramUrl?: string;
@@ -59,6 +61,8 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
   isCenter,
   isPlaying,
   isMuted,
+  isCarouselInView,
+  diff,
   title,
   category,
   slideNumber,
@@ -81,6 +85,19 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
     ? videoUrl
     : defaultFallbackVideos[(slideNumber - 1) % defaultFallbackVideos.length] || '/videos/reel-1.mp4';
 
+  // Progressive preloading strategy:
+  // - Off-screen carousel: none (prevent multi-MB downloads on initial load)
+  // - Center active visible reel: auto
+  // - Adjacent reels: metadata (downloads only dimensions & headers, ~kb)
+  // - Far side reels: none
+  const preloadStrategy = !isCarouselInView
+    ? 'none'
+    : isCenter
+    ? 'auto'
+    : Math.abs(diff) <= 1
+    ? 'metadata'
+    : 'none';
+
   // Reset loading state if video source URL changes
   useEffect(() => {
     setIsMediaReady(false);
@@ -91,7 +108,7 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    if (isCenter) {
+    if (isCenter && isCarouselInView) {
       if (onVideoRefReady) {
         onVideoRefReady(video);
       }
@@ -118,12 +135,12 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
         video.pause();
       }
     } else {
-      // Side videos MUST be paused and muted at all times
+      // Side videos or off-screen carousel: MUST be strictly paused and muted
       video.muted = true;
       video.defaultMuted = true;
       video.pause();
     }
-  }, [isCenter, isPlaying, isMuted, resolvedVideoUrl, onVideoRefReady]);
+  }, [isCenter, isPlaying, isMuted, isCarouselInView, resolvedVideoUrl, onVideoRefReady]);
 
   const handleMediaLoaded = () => {
     setIsMediaReady(true);
@@ -174,12 +191,14 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
         </div>
       </div>
 
-      {/* Background Poster: Only displayed if a genuine user-uploaded poster is provided (never Unsplash) */}
+      {/* Background Poster: Lightweight poster thumbnail rendered immediately */}
       {posterUrl && !posterUrl.includes('unsplash.com') && (
         <img
           src={posterUrl}
           alt={title || ''}
           aria-hidden="true"
+          loading="lazy"
+          decoding="async"
           onLoad={handleMediaLoaded}
           onError={() => {
             // Even if poster errors out, don't trap the user in the loading skeleton
@@ -191,7 +210,7 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
         />
       )}
 
-      {/* Primary HTML5 Video Element for direct video files (.mp4, .webm, blob) */}
+      {/* Primary HTML5 Video Element with Progressive Viewport-Aware Preload */}
       {resolvedVideoUrl && (
         <video
           ref={(el) => {
@@ -205,7 +224,7 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
           playsInline
           webkit-playsinline="true"
           loop
-          preload="auto"
+          preload={preloadStrategy}
           muted={isCenter ? isMuted : true}
           onClick={(e) => {
             if (isCenter && onVideoClick) {
@@ -822,14 +841,37 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     setTimeout(() => setSaveSuccessMessage(null), 3000);
   };
 
-  // IMPORTANT: Disable auto-scroll in AI Studio mode so slides NEVER shift while user is editing/uploading!
+  // IntersectionObserver to pause video playback and prevent background auto-scroll when off-screen
+  const portfolioContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isCarouselInView, setIsCarouselInView] = useState<boolean>(true);
+
   useEffect(() => {
-    if (isAiStudio || isHovered || totalSlides <= 1) return;
+    const el = portfolioContainerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsCarouselInView(entry.isIntersecting);
+      },
+      {
+        root: null,
+        rootMargin: '150px 0px', // preload slightly before viewport intersection
+        threshold: 0.15,
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // IMPORTANT: Disable auto-scroll when off-screen, hovered, or in AI Studio edit mode!
+  useEffect(() => {
+    if (isAiStudio || isHovered || !isCarouselInView || totalSlides <= 1) return;
     const interval = setInterval(() => {
       handleNext();
     }, 4500);
     return () => clearInterval(interval);
-  }, [isAiStudio, isHovered, totalSlides, handleNext]);
+  }, [isAiStudio, isHovered, isCarouselInView, totalSlides, handleNext]);
 
   // Touch swipe support for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -853,7 +895,11 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
   const hasAnyCustomReplacements = Object.keys(replacedBySlide).length > 0;
 
   return (
-    <div id="work" className="bg-transparent pt-4 sm:pt-6 pb-6 sm:pb-8 relative overflow-hidden select-none">
+    <div
+      id="work"
+      ref={portfolioContainerRef}
+      className="bg-transparent pt-4 sm:pt-6 pb-6 sm:pb-8 relative overflow-hidden select-none"
+    >
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Hidden File Picker directly locked to targetSlideRef */}
         <input
@@ -922,6 +968,8 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
                     isCenter={isCenter}
                     isPlaying={isPlaying}
                     isMuted={isMuted}
+                    isCarouselInView={isCarouselInView}
+                    diff={diff}
                     title={reel.title}
                     category={reel.category}
                     slideNumber={index + 1}

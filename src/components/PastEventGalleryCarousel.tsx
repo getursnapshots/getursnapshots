@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -83,6 +83,27 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
 export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> = () => {
   const [modalImageIndex, setModalImageIndex] = useState<number | null>(null);
   const [isUserHovering, setIsUserHovering] = useState<boolean>(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [isInView, setIsInView] = useState<boolean>(false);
+
+  // Pause continuous CSS marquee animation when off-screen to save CPU, GPU & battery
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { rootMargin: '100px 0px' }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Duplicated list to create infinite seamless loop without jump
   const duplicatedImages = [...GALLERY_IMAGES, ...GALLERY_IMAGES];
@@ -112,11 +133,12 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
     return () => window.removeEventListener('keydown', handleModalKeyDown);
   }, [modalImageIndex, handleModalPrev, handleModalNext]);
 
-  const shouldPauseAnimation = isUserHovering || modalImageIndex !== null;
+  const shouldPauseAnimation = !isInView || isUserHovering || modalImageIndex !== null;
 
   return (
     <section
       id="past-work"
+      ref={sectionRef}
       className="relative py-8 sm:py-14 bg-transparent overflow-hidden select-none"
       aria-label="Wall of Snap Shots continuous image gallery"
     >

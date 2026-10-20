@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +13,9 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
+
+  // Gzip / Deflate response compression for ultra-fast text/json/asset transfer
+  app.use(compression());
 
   // 1. Security Headers Middleware (Protection against XSS, clickjacking, sniffing)
   app.use((_req, res, next) => {
@@ -578,12 +582,41 @@ async function startServer() {
     }
   });
 
-  // Serve static files from public
-  app.use(express.static(path.resolve(__dirname, 'public')));
+  // High-performance static asset caching
+  app.use(
+    '/videos',
+    express.static(path.resolve(__dirname, 'public/videos'), {
+      maxAge: '30d',
+      etag: true,
+      lastModified: true,
+    })
+  );
+
+  app.use(
+    express.static(path.resolve(__dirname, 'public'), {
+      maxAge: '1d',
+      etag: true,
+      lastModified: true,
+    })
+  );
 
   if (process.env.NODE_ENV === 'production' || process.env.VITE_PROD === 'true') {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    app.use(
+      '/assets',
+      express.static(path.resolve(__dirname, 'dist/assets'), {
+        maxAge: '1y',
+        immutable: true,
+        etag: true,
+      })
+    );
+    app.use(
+      express.static(path.resolve(__dirname, 'dist'), {
+        maxAge: '1h',
+        etag: true,
+      })
+    );
     app.get('*', (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.resolve(__dirname, 'dist/index.html'));
     });
   } else {

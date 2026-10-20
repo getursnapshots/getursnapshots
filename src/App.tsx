@@ -3,23 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
-import { ServicesPage } from './pages/ServicesPage';
-import { FaqsPage } from './pages/FaqsPage';
-import { ContactPage } from './pages/ContactPage';
-import { BookingModal } from './components/BookingModal';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { WelcomePopup } from './components/WelcomePopup';
 import { LogoProvider } from './context/LogoContext';
 import { CountryProvider } from './context/CountryContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
-import { AdminLoginModal } from './components/AdminLoginModal';
 import { SEOHead } from './components/SEOHead';
 import { PackageItem } from './types';
+
+// Code-split non-critical routes and heavy modals to slash initial JS execution & bundle size
+const ServicesPage = lazy(() => import('./pages/ServicesPage').then((m) => ({ default: m.ServicesPage })));
+const FaqsPage = lazy(() => import('./pages/FaqsPage').then((m) => ({ default: m.FaqsPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })));
+const BookingModal = lazy(() => import('./components/BookingModal').then((m) => ({ default: m.BookingModal })));
+const AdminLoginModal = lazy(() => import('./components/AdminLoginModal').then((m) => ({ default: m.AdminLoginModal })));
 
 // Scroll restoration helper on route transition
 function ScrollToTop() {
@@ -154,17 +156,32 @@ function MainAppLayout() {
           {/* Separate Dedicated Services Page */}
           <Route
             path="/services"
-            element={<ServicesPage onBookService={handleSelectService} />}
+            element={
+              <Suspense fallback={<div className="min-h-screen bg-black" />}>
+                <ServicesPage onBookService={handleSelectService} />
+              </Suspense>
+            }
           />
 
           {/* Separate Dedicated FAQs Page */}
           <Route
             path="/faqs"
-            element={<FaqsPage onOpenBooking={() => openBookingModal()} />}
+            element={
+              <Suspense fallback={<div className="min-h-screen bg-black" />}>
+                <FaqsPage onOpenBooking={() => openBookingModal()} />
+              </Suspense>
+            }
           />
 
           {/* Separate Dedicated Contact Us Page */}
-          <Route path="/contact" element={<ContactPage />} />
+          <Route
+            path="/contact"
+            element={
+              <Suspense fallback={<div className="min-h-screen bg-black" />}>
+                <ContactPage />
+              </Suspense>
+            }
+          />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -177,23 +194,29 @@ function MainAppLayout() {
       {/* Interactive In-Site WhatsApp Widget (Bottom-Right) */}
       <FloatingWhatsApp onOpenBooking={() => openBookingModal()} />
 
-      {/* Professional Centered Booking Popup / Modal */}
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => {
-          setIsBookingModalOpen(false);
-          setSelectedCoupon('');
-        }}
-        initialService={selectedService}
-        initialPackage={selectedPackage}
-        initialCoupon={selectedCoupon}
-      />
+      {/* Professional Centered Booking Popup / Modal - Lazy loaded */}
+      {isBookingModalOpen && (
+        <Suspense fallback={null}>
+          <BookingModal
+            isOpen={isBookingModalOpen}
+            onClose={() => {
+              setIsBookingModalOpen(false);
+              setSelectedCoupon('');
+            }}
+            initialService={selectedService}
+            initialPackage={selectedPackage}
+            initialCoupon={selectedCoupon}
+          />
+        </Suspense>
+      )}
 
       {/* Timed Welcome Privilege Offer Popup */}
       <WelcomePopup onClaimOffer={() => openBookingModal(undefined, undefined, 'SNAP15')} />
 
-      {/* Admin Login Modal */}
-      <AdminLoginModal />
+      {/* Admin Login Modal - Lazy loaded */}
+      <Suspense fallback={null}>
+        <AdminLoginModal />
+      </Suspense>
     </div>
   );
 }
