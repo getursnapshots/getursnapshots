@@ -1,6 +1,6 @@
 {
   "name": "Snap Shots",
-  "description": "Professional reels, photography and videography for events, brands, businesses and social media.",
+  "description": "Premium event videography, photography, and high-impact content creation for weddings, corporate events, and brands.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

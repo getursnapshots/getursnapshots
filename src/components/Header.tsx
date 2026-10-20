@@ -3,6 +3,7 @@ import { X, ArrowUpRight, MessageSquare, UserPlus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
 import logoPng from '../assets/logo.png';
+import { WhatsAppIcon } from './icons/WhatsAppIcon';
 
 interface HeaderProps {
   onBookClick: () => void;
@@ -43,7 +44,6 @@ export const Header: React.FC<HeaderProps> = ({ onBookClick }) => {
     { label: 'Pricing', path: '/#pricing', hash: 'pricing' },
     { label: 'Services', path: '/services', isPage: true },
     { label: 'Process', path: '/#process', hash: 'process' },
-    { label: 'Testimonials', path: '/#testimonials', hash: 'testimonials' },
     { label: 'FAQs', path: '/faqs', isPage: true },
     { label: 'Contact Us', path: '/contact', isPage: true },
   ];
@@ -308,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({ onBookClick }) => {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-[#ffc800]" />
+                  <WhatsAppIcon className="w-3.5 h-3.5 text-[#25D366]" />
                   <span>Need help? Chat with our team on WhatsApp</span>
                 </a>
               </div>

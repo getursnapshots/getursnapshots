@@ -18,6 +18,7 @@ import { LogoProvider } from './context/LogoContext';
 import { CountryProvider } from './context/CountryContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { AdminLoginModal } from './components/AdminLoginModal';
+import { SEOHead } from './components/SEOHead';
 import { PackageItem } from './types';
 
 // Scroll restoration helper on route transition
@@ -131,6 +132,7 @@ function MainAppLayout() {
       </div>
 
       <ScrollToTop />
+      <SEOHead />
 
       {/* Sticky Navigation Header with Multi-Page Routing */}
       <Header onBookClick={() => openBookingModal()} />

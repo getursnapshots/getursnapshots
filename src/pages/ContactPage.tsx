@@ -9,12 +9,12 @@ import {
   CheckCircle2,
   Sparkles,
   Instagram,
-  Youtube,
   Facebook,
   ArrowUpRight,
 } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { submitBookingRequest, buildMailtoUrl } from '../utils/bookingSubmission';
+import { WhatsAppIcon } from '../components/icons/WhatsAppIcon';
 
 export const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -110,7 +110,7 @@ export const ContactPage: React.FC = () => {
             <div className="p-6 sm:p-7 rounded-3xl bg-zinc-950 border border-zinc-800 shadow-xl relative overflow-hidden">
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#bd1616] text-white shadow-md">
-                  <MessageSquare className="w-5 h-5" />
+                  <WhatsAppIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">Instant WhatsApp Desk</h3>
@@ -130,7 +130,7 @@ export const ContactPage: React.FC = () => {
                 onClick={handleWhatsAppDirect}
                 className="w-full h-12 flex items-center justify-center gap-2 rounded-full bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-[#bd1616]/30 transition-all hover:scale-[1.02] border border-[#9e1212] cursor-pointer"
               >
-                <MessageSquare className="w-4 h-4" />
+                <WhatsAppIcon className="w-4 h-4 text-white" />
                 <span>CHAT ON WHATSAPP (+91 90143 19818)</span>
               </button>
             </div>
@@ -207,7 +207,7 @@ export const ContactPage: React.FC = () => {
             <div className="p-6 rounded-3xl bg-zinc-950/70 border border-zinc-800/80 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-white block">Follow Our Works</span>
-                <span className="text-[11px] text-zinc-400">@snapshots_by_abhi</span>
+                <span className="text-[11px] text-zinc-400">{siteConfig.business.instagramHandle}</span>
               </div>
               <div className="flex items-center gap-2">
                 <a
@@ -218,15 +218,6 @@ export const ContactPage: React.FC = () => {
                   aria-label="Instagram"
                 >
                   <Instagram className="w-4 h-4" />
-                </a>
-                <a
-                  href={siteConfig.business.youtube}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 hover:bg-[#bd1616] text-white transition-colors border border-zinc-800"
-                  aria-label="YouTube"
-                >
-                  <Youtube className="w-4 h-4" />
                 </a>
                 <a
                   href={siteConfig.business.facebook}

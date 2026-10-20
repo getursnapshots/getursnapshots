@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, MessageSquare, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Sparkles } from 'lucide-react';
+import { WhatsAppIcon } from './icons/WhatsAppIcon';
 import { siteConfig } from '../config/siteConfig';
 import { useCountry } from '../context/CountryContext';
 
@@ -74,7 +75,7 @@ export const CTA: React.FC<CTAProps> = ({ onBookClick }) => {
                     <span className="absolute -inset-1 rounded-full border border-[#bd1616] animate-ping opacity-40 pointer-events-none" />
                   </>
                 )}
-                <MessageSquare className="w-4 h-4 text-[#bd1616] relative z-10" />
+                <WhatsAppIcon className="w-4 h-4 text-[#bd1616] relative z-10" />
                 <span className="relative z-10">WHATSAPP US</span>
               </a>
             </div>

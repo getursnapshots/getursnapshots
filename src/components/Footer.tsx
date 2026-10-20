@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Instagram,
-  Youtube,
   Facebook,
   Phone,
   Mail,
@@ -16,6 +15,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
 import { BrandLogo } from './BrandLogo';
+import { WhatsAppIcon } from './icons/WhatsAppIcon';
 
 export const Footer: React.FC = () => {
   const navigate = useNavigate();
@@ -31,7 +31,6 @@ export const Footer: React.FC = () => {
     { label: 'Our Work', path: '/#work', hash: 'work' },
     { label: 'Packages & Pricing', path: '/#pricing', hash: 'pricing' },
     { label: 'How It Works', path: '/#process', hash: 'process' },
-    { label: 'Client Reviews', path: '/#testimonials', hash: 'testimonials' },
     { label: 'FAQs', path: '/faqs', isPage: true },
     { label: 'Contact Us', path: '/contact', isPage: true },
   ];
@@ -90,7 +89,7 @@ export const Footer: React.FC = () => {
               <BrandLogo variant="footer" allowUpload={false} />
             </div>
             <p className="text-[11px] sm:text-xs font-bold tracking-[0.22em] text-[#bd1616] uppercase mt-2.5">
-              your moments &bull; our snap
+              your moments &bull; our snaps
             </p>
           </div>
 
@@ -104,15 +103,6 @@ export const Footer: React.FC = () => {
               aria-label="Instagram"
             >
               <Instagram className="w-4 h-4" />
-            </a>
-            <a
-              href={siteConfig.business.youtube}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-[#bd1616] hover:border-[#bd1616] transition-all hover:scale-105"
-              aria-label="YouTube"
-            >
-              <Youtube className="w-4 h-4" />
             </a>
             <a
               href={siteConfig.business.facebook}
@@ -129,10 +119,10 @@ export const Footer: React.FC = () => {
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-emerald-400 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 transition-all hover:scale-105"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 border border-zinc-800 text-[#25D366] hover:text-white hover:bg-[#25D366] hover:border-[#25D366] transition-all hover:scale-105"
               aria-label="WhatsApp"
             >
-              <MessageSquare className="w-4 h-4" />
+              <WhatsAppIcon className="w-4 h-4" />
             </a>
           </div>
         </div>
@@ -258,8 +248,8 @@ export const Footer: React.FC = () => {
                   className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-850 hover:border-emerald-500/60 transition-all flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-                      <MessageSquare className="w-4 h-4" />
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-[#25D366]">
+                      <WhatsAppIcon className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">

@@ -5,7 +5,6 @@ import { PastEventGalleryCarousel } from '../components/PastEventGalleryCarousel
 import { Pricing } from '../components/Pricing';
 import { WhyChooseUs } from '../components/WhyChooseUs';
 import { Process } from '../components/Process';
-import { Testimonials } from '../components/Testimonials';
 import { CTA } from '../components/CTA';
 import { FadeInSection } from '../components/FadeInSection';
 import { ReelWorkItem } from '../types';
@@ -62,10 +61,6 @@ export const HomePage: React.FC<HomePageProps> = ({
         <Process onStartBooking={() => onBookClick()} />
       </FadeInSection>
 
-      {/* 7. Testimonials & Client Reviews */}
-      <FadeInSection>
-        <Testimonials />
-      </FadeInSection>
 
       {/* 8. Bottom Call To Action */}
       <FadeInSection>
