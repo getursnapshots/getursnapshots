@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
 import logoPng from '../assets/logo.png';
 import { WhatsAppIcon } from './icons/WhatsAppIcon';
+import { openExternalUrl } from '../utils/navigationHelper';
 
 interface HeaderProps {
   onBookClick: () => void;
@@ -77,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({ onBookClick }) => {
     const message = encodeURIComponent(
       'Hi Snap Shots, I am a certified videographer / reel-maker and would like to join the creator network.'
     );
-    window.open(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${message}`, '_blank');
+    openExternalUrl(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${message}`);
   };
 
   return (

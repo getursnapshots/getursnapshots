@@ -15,6 +15,7 @@ import {
 import { siteConfig } from '../config/siteConfig';
 import { submitBookingRequest, buildMailtoUrl } from '../utils/bookingSubmission';
 import { WhatsAppIcon } from '../components/icons/WhatsAppIcon';
+import { openExternalUrl } from '../utils/navigationHelper';
 
 export const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -64,7 +65,7 @@ export const ContactPage: React.FC = () => {
     const text = encodeURIComponent(
       `Hi Snap Shots, I would like to enquire about booking a shoot in Telangana / USA.`
     );
-    window.open(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${text}`, '_blank');
+    openExternalUrl(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${text}`);
   };
 
   return (

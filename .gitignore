@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+.dev.env.json
+.dev.pid
+*.tmp
+*.local
+

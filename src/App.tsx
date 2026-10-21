@@ -15,6 +15,7 @@ import { CountryProvider } from './context/CountryContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { SEOHead } from './components/SEOHead';
 import { PackageItem } from './types';
+import { trackBookShootClick } from './services/analyticsService';
 
 // Code-split non-critical routes and heavy modals to slash initial JS execution & bundle size
 const ServicesPage = lazy(() => import('./pages/ServicesPage').then((m) => ({ default: m.ServicesPage })));
@@ -42,7 +43,12 @@ function MainAppLayout() {
   const [selectedCoupon, setSelectedCoupon] = useState<string>('');
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
 
-  const openBookingModal = (service?: string, pkgId?: string, coupon?: string) => {
+  const openBookingModal = (service?: string, pkgId?: string, coupon?: string, triggerLocation = 'navigation') => {
+    trackBookShootClick({
+      location: triggerLocation,
+      service,
+      packageId: pkgId,
+    });
     if (service) setSelectedService(service);
     if (pkgId) setSelectedPackage(pkgId);
     if (coupon !== undefined) setSelectedCoupon(coupon);
@@ -50,11 +56,11 @@ function MainAppLayout() {
   };
 
   const handleSelectPackage = (pkgId: string) => {
-    openBookingModal(undefined, pkgId);
+    openBookingModal(undefined, pkgId, undefined, 'pricing_package_card');
   };
 
   const handleSelectService = (serviceTitle: string) => {
-    openBookingModal(serviceTitle);
+    openBookingModal(serviceTitle, undefined, undefined, 'services_card');
   };
 
   // Universal delegate listener to ensure any "BOOK A SHOOT" button triggers the modal
@@ -101,6 +107,11 @@ function MainAppLayout() {
         clickable.id === 'wedding-plan-book-btn';
 
       if (isBookingTrigger) {
+        trackBookShootClick({
+          location: 'site_cta_click',
+          buttonText: (clickable.textContent || '').trim().slice(0, 60),
+          buttonId: clickable.id || undefined,
+        });
         openBookingModal();
       }
     };

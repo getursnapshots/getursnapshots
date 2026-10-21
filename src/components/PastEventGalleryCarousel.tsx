@@ -8,6 +8,7 @@ import {
 import { getResponsiveImageSrcSet } from '../utils/imageUtils';
 
 import { galleryImages } from '../config/galleryConfig';
+import { useGalleryPreload } from '../hooks/useGalleryPreload';
 
 interface PastEventGalleryCarouselProps {
   onBookClick?: (category?: string) => void;
@@ -28,6 +29,13 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
 }) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoaded(true);
+    }
+  }, [imgUrl]);
 
   return (
     <div
@@ -44,10 +52,11 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
       {/* Main Image */}
       {!hasError && (
         <img
+          ref={imgRef}
           src={imgUrl}
           srcSet={getResponsiveImageSrcSet(imgUrl, [320, 480, 640, 800])}
           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 280px, 320px"
-          alt="Snap Shots past event capture"
+          alt={`Snap Shots portfolio showcase ${originalIndex + 1}`}
           loading="lazy"
           decoding="async"
           draggable={false}
@@ -82,11 +91,27 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
 
 export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> = () => {
   const [modalImageIndex, setModalImageIndex] = useState<number | null>(null);
-  const [isUserHovering, setIsUserHovering] = useState<boolean>(false);
   const sectionRef = useRef<HTMLElement | null>(null);
-  const [isInView, setIsInView] = useState<boolean>(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isInView, setIsInView] = useState<boolean>(true);
 
-  // Pause continuous CSS marquee animation when off-screen to save CPU, GPU & battery
+  // Triple set enables completely seamless infinite wrapping in both directions
+  const duplicatedImages = [...GALLERY_IMAGES, ...GALLERY_IMAGES, ...GALLERY_IMAGES];
+
+  // Animation & Smooth Physics Drag Refs
+  const isHoveredRef = useRef<boolean>(false);
+  const isInteractingRef = useRef<boolean>(false);
+  const isDraggingRef = useRef<boolean>(false);
+  const dragStartXRef = useRef<number>(0);
+  const dragScrollStartRef = useRef<number>(0);
+  const dragDistanceRef = useRef<number>(0);
+  const velocityRef = useRef<number>(0);
+  const lastDragTimeRef = useRef<number>(0);
+  const lastDragXRef = useRef<number>(0);
+  const currentSpeedRef = useRef<number>(36); // gentle luxury auto-glide px/sec
+  const interactionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Intersection observer to pause calculations when off-screen
   useEffect(() => {
     const el = sectionRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') {
@@ -98,15 +123,166 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
       ([entry]) => {
         setIsInView(entry.isIntersecting);
       },
-      { rootMargin: '100px 0px' }
+      { rootMargin: '150px 0px' }
     );
 
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  // Duplicated list to create infinite seamless loop without jump
-  const duplicatedImages = [...GALLERY_IMAGES, ...GALLERY_IMAGES];
+  // Initialize scroll position to the middle set for fluid bidirectional scrolling
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const initScroll = () => {
+      if (container.scrollWidth > 0) {
+        container.scrollLeft = container.scrollWidth / 3;
+      }
+    };
+    initScroll();
+    const timer = setTimeout(initScroll, 250);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 60/120Hz Smooth Gliding Loop with continuous physics & momentum
+  useEffect(() => {
+    let animId: number;
+    let lastTime = performance.now();
+
+    const tick = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.08); // clamp frame delta
+      lastTime = now;
+
+      const container = scrollContainerRef.current;
+      if (container && isInView && modalImageIndex === null) {
+        const singleSetWidth = container.scrollWidth / 3;
+
+        if (!isDraggingRef.current) {
+          // Apply momentum fling decay
+          if (Math.abs(velocityRef.current) > 1) {
+            container.scrollLeft += velocityRef.current * dt;
+            velocityRef.current *= Math.pow(0.88, dt * 60);
+            if (Math.abs(velocityRef.current) < 1) {
+              velocityRef.current = 0;
+            }
+          }
+
+          // Smoothly ramp speed down when hovering/interacting, and back up when idle
+          const targetSpeed =
+            isHoveredRef.current || isInteractingRef.current ? 0 : 36;
+          currentSpeedRef.current +=
+            (targetSpeed - currentSpeedRef.current) * (targetSpeed === 0 ? 0.12 : 0.04);
+
+          if (Math.abs(currentSpeedRef.current) > 0.05) {
+            container.scrollLeft += currentSpeedRef.current * dt;
+          }
+
+          // Seamless loop boundary wrapping
+          if (singleSetWidth > 0) {
+            if (container.scrollLeft >= singleSetWidth * 2) {
+              container.scrollLeft -= singleSetWidth;
+            } else if (container.scrollLeft <= 10) {
+              container.scrollLeft += singleSetWidth;
+            }
+          }
+        }
+      }
+
+      animId = requestAnimationFrame(tick);
+    };
+
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [isInView, modalImageIndex]);
+
+  // Pointer drag events
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    lastDragXRef.current = e.clientX;
+    lastDragTimeRef.current = performance.now();
+    velocityRef.current = 0;
+    dragDistanceRef.current = 0;
+    isInteractingRef.current = true;
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      dragScrollStartRef.current = container.scrollLeft;
+    }
+    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const currentX = e.clientX;
+    const delta = currentX - dragStartXRef.current;
+    dragDistanceRef.current = Math.abs(delta);
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollLeft = dragScrollStartRef.current - delta;
+
+      // Handle wrapping during active drag
+      const singleSetWidth = container.scrollWidth / 3;
+      if (singleSetWidth > 0) {
+        if (container.scrollLeft >= singleSetWidth * 2) {
+          container.scrollLeft -= singleSetWidth;
+          dragScrollStartRef.current -= singleSetWidth;
+        } else if (container.scrollLeft <= 10) {
+          container.scrollLeft += singleSetWidth;
+          dragScrollStartRef.current += singleSetWidth;
+        }
+      }
+    }
+
+    const now = performance.now();
+    const dt = (now - lastDragTimeRef.current) / 1000;
+    if (dt > 0.005) {
+      velocityRef.current = -(currentX - lastDragXRef.current) / dt;
+      lastDragXRef.current = currentX;
+      lastDragTimeRef.current = now;
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    interactionTimeoutRef.current = setTimeout(() => {
+      isInteractingRef.current = false;
+    }, 1800);
+  };
+
+  // Wheel horizontal scrolling support
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(e.deltaX) > 0 || e.shiftKey) {
+      isInteractingRef.current = true;
+      if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+      interactionTimeoutRef.current = setTimeout(() => {
+        isInteractingRef.current = false;
+      }, 1600);
+    }
+  };
+
+  // Smooth scroll directional nudge
+  const handleSmoothScrollBy = (offset: number) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    isInteractingRef.current = true;
+    container.scrollBy({ left: offset, behavior: 'smooth' });
+
+    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    interactionTimeoutRef.current = setTimeout(() => {
+      isInteractingRef.current = false;
+    }, 2200);
+  };
+
+  // Safe card click (ignores drag releases)
+  const handleCardClick = (index: number) => {
+    if (dragDistanceRef.current > 7) return;
+    setModalImageIndex(index);
+  };
 
   // Modal navigation
   const handleModalPrev = useCallback(() => {
@@ -133,7 +309,23 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
     return () => window.removeEventListener('keydown', handleModalKeyDown);
   }, [modalImageIndex, handleModalPrev, handleModalNext]);
 
-  const shouldPauseAnimation = !isInView || isUserHovering || modalImageIndex !== null;
+  // Hook to automatically preload upcoming gallery images when nearing the viewport boundary
+  const { sentinelRef, preloadSurrounding } = useGalleryPreload({
+    containerRef: scrollContainerRef,
+    images: GALLERY_IMAGES,
+    thresholdPx: 800,
+    thresholdRatio: 0.65,
+    batchSize: 4,
+    direction: 'horizontal',
+    loop: true,
+  });
+
+  // Preload adjacent images when a user opens the lightbox modal
+  useEffect(() => {
+    if (modalImageIndex !== null) {
+      preloadSurrounding(modalImageIndex, 2);
+    }
+  }, [modalImageIndex, preloadSurrounding]);
 
   return (
     <section
@@ -159,29 +351,57 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
           Wall of Snap Shots
         </h2>
         <p className="mt-2.5 text-center text-zinc-400 font-normal text-xs sm:text-sm max-w-lg mx-auto">
-          Candid celebrations, authentic emotions, and signature shots captured by our certified creators.
+          Candid celebrations, authentic emotions, and signature shots captured by our certified creators. Drag or use arrows to explore.
         </p>
       </div>
 
-      <div className="relative w-full max-w-[100vw] overflow-hidden">
+      <div className="relative w-full max-w-[100vw] overflow-hidden group/scroller">
         {/* Left & Right Cinematic Vignette Fades */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-12 sm:w-28 md:w-36 bg-gradient-to-r from-black via-black/80 to-transparent z-10" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 sm:w-28 md:w-36 bg-gradient-to-l from-black via-black/80 to-transparent z-10" />
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-28 md:w-36 bg-gradient-to-r from-black via-black/80 to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-28 md:w-36 bg-gradient-to-l from-black via-black/80 to-transparent z-10" />
 
-        {/* Continuous Scrolling Track (Marquee / Infinite Loop) */}
-        <div
-          className="relative overflow-hidden py-2"
-          onMouseEnter={() => setIsUserHovering(true)}
-          onMouseLeave={() => setIsUserHovering(false)}
-          onTouchStart={() => setIsUserHovering(true)}
-          onTouchEnd={() => setIsUserHovering(false)}
+        {/* Smooth Scroll Navigation Arrows (Brand red #bd1616 hover/active) */}
+        <button
+          type="button"
+          onClick={() => handleSmoothScrollBy(-360)}
+          aria-label="Scroll gallery left"
+          className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-black/80 hover:bg-[#bd1616] active:bg-[#750d0d] text-white flex items-center justify-center border border-white/20 backdrop-blur-md shadow-xl transition-all duration-200 cursor-pointer hover:scale-110 active:scale-95 group/arrow focus:outline-hidden focus:ring-2 focus:ring-[#bd1616]"
         >
-          <div
-            className="animate-gallery-continuous flex items-center gap-3 sm:gap-5"
-            style={{
-              animationPlayState: shouldPauseAnimation ? 'paused' : 'running',
-            }}
-          >
+          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover/arrow:-translate-x-0.5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSmoothScrollBy(360)}
+          aria-label="Scroll gallery right"
+          className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-black/80 hover:bg-[#bd1616] active:bg-[#750d0d] text-white flex items-center justify-center border border-white/20 backdrop-blur-md shadow-xl transition-all duration-200 cursor-pointer hover:scale-110 active:scale-95 group/arrow focus:outline-hidden focus:ring-2 focus:ring-[#bd1616]"
+        >
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover/arrow:translate-x-0.5" />
+        </button>
+
+        {/* Continuous Smooth Scrolling Track (Target Selected Element) */}
+        <div
+          ref={scrollContainerRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onMouseEnter={() => {
+            isHoveredRef.current = true;
+          }}
+          onMouseLeave={() => {
+            isHoveredRef.current = false;
+            handlePointerUp();
+          }}
+          onWheel={handleWheel}
+          className="relative overflow-x-auto no-scrollbar py-2 cursor-grab active:cursor-grabbing will-change-scroll"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+            overscrollBehaviorX: 'contain',
+          }}
+        >
+          <div className="flex items-center gap-3 sm:gap-5 w-max px-4">
             {duplicatedImages.map((imgUrl, idx) => {
               const originalIndex = idx % GALLERY_IMAGES.length;
               return (
@@ -189,10 +409,16 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
                   key={`${imgUrl}-${idx}`}
                   imgUrl={imgUrl}
                   originalIndex={originalIndex}
-                  onOpenModal={(i) => setModalImageIndex(i)}
+                  onOpenModal={handleCardClick}
                 />
               );
             })}
+            {/* Viewport Boundary Sentinel for Native Intersection Preloading */}
+            <div
+              ref={sentinelRef}
+              className="w-1 h-full shrink-0 pointer-events-none opacity-0"
+              aria-hidden="true"
+            />
           </div>
         </div>
       </div>
@@ -230,11 +456,16 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
             </button>
 
             {/* Modal Image */}
-            <img
-              src={GALLERY_IMAGES[modalImageIndex]}
-              alt="Enlarged past work event photograph"
-              className="max-h-[85vh] max-w-full rounded-xl sm:rounded-2xl object-contain shadow-2xl border border-zinc-800"
-            />
+            <div className="flex flex-col items-center max-w-full">
+              <img
+                src={GALLERY_IMAGES[modalImageIndex]}
+                alt={`Enlarged portfolio showcase ${modalImageIndex + 1}`}
+                className="max-h-[80vh] max-w-full rounded-xl sm:rounded-2xl object-contain shadow-2xl border border-zinc-800"
+              />
+              <div className="mt-3 px-3 py-1 rounded-full bg-black/70 border border-white/10 text-xs text-zinc-300 font-medium tracking-wide">
+                Photo {modalImageIndex + 1} of {GALLERY_IMAGES.length}
+              </div>
+            </div>
 
             {/* Modal Next Button */}
             <button

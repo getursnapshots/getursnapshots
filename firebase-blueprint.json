@@ -49,9 +49,21 @@
           "type": "string",
           "description": "Selected package (e.g. Hourly Plan, Half Day Plan)."
         },
+        "price": {
+          "type": "string",
+          "description": "Quoted or selected package price."
+        },
         "eventDate": {
           "type": "string",
           "description": "Date of the scheduled shoot or event."
+        },
+        "time": {
+          "type": "string",
+          "description": "Preferred time for the shoot."
+        },
+        "duration": {
+          "type": "string",
+          "description": "Estimated duration of the shoot."
         },
         "city": {
           "type": "string",
@@ -59,11 +71,19 @@
         },
         "country": {
           "type": "string",
-          "description": "Country code (IN or US)."
+          "description": "Country code or name."
+        },
+        "couponCode": {
+          "type": "string",
+          "description": "Applied discount coupon code if any."
         },
         "requirements": {
           "type": "string",
           "description": "Additional notes, styling preferences, or brief from the client."
+        },
+        "source": {
+          "type": "string",
+          "description": "Origin of the lead (e.g. Booking Modal, Contact Page)."
         },
         "status": {
           "type": "string",

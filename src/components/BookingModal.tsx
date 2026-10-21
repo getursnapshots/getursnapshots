@@ -41,6 +41,7 @@ import {
   calculateDiscountedPrice,
   CouponResult,
 } from '../utils/couponHelper';
+import { openExternalUrl } from '../utils/navigationHelper';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -470,7 +471,7 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
       price: pricingCalculation?.finalPrice || resolvedPackageInfo.price,
       packageName: `${resolvedPackageInfo.name} (${formData.service} - Ref: ${bookingReferenceId || 'DIRECT'})`,
     });
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openExternalUrl(url);
   };
 
   const handleResetAndClose = () => {

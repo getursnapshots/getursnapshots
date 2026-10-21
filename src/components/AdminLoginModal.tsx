@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { WhatsAppIcon } from './icons/WhatsAppIcon';
+import { fetchBookingsFromFirestore } from '../config/firebase';
 
 export const AdminLoginModal: React.FC = () => {
   const {
@@ -53,6 +54,40 @@ export const AdminLoginModal: React.FC = () => {
     setIsLoadingLeads(true);
     setError(null);
     try {
+      // 1. Primary: Direct fetch from Firebase Firestore ('bookings' collection)
+      try {
+        const firestoreLeads = await fetchBookingsFromFirestore();
+        if (firestoreLeads && firestoreLeads.length > 0) {
+          setLeads(
+            firestoreLeads.map((item) => ({
+              id: item.id,
+              name: item.clientName,
+              clientName: item.clientName,
+              phone: item.phone,
+              email: item.email || '',
+              service: item.service,
+              package: item.package || '',
+              price: item.price || '',
+              date: item.eventDate || '',
+              time: item.time || '',
+              duration: item.duration || '',
+              location: item.city || '',
+              country: item.country || '',
+              couponCode: item.couponCode || '',
+              requirements: item.requirements || '',
+              status: item.status || 'pending',
+              submittedAt: item.createdAt || '',
+              createdAt: item.createdAt || '',
+            }))
+          );
+          setIsLoadingLeads(false);
+          return;
+        }
+      } catch (firestoreErr) {
+        console.warn('Direct Firestore leads query notice (trying fallback endpoint):', firestoreErr);
+      }
+
+      // 2. Secondary fallback: Query /api/leads endpoint
       const token = await getIdToken();
       if (!token) {
         setError('Please sign in with your Firebase admin account to view leads.');

@@ -20,3 +20,12 @@ export function getResponsiveImageSrcSet(
     .map((w) => `${baseUrl}?q=${quality}&w=${w}&auto=format&fit=crop ${w}w`)
     .join(', ');
 }
+
+export {
+  preloadImage,
+  preloadImages,
+  isImagePreloaded,
+  getPreloadedUrls,
+  clearPreloadCache,
+} from './imagePreloader';
+

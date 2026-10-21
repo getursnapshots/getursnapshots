@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, ArrowUpRight, CheckCircle2, Clock, MessageSquare, ShieldCheck, Film, Camera } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { ServiceItem } from '../types';
+import { openExternalUrl } from '../utils/navigationHelper';
 
 interface ServicesPageProps {
   onBookService: (serviceTitle: string) => void;
@@ -32,7 +33,7 @@ export const ServicesPage: React.FC<ServicesPageProps> = ({ onBookService }) => 
     const text = encodeURIComponent(
       `Hi Snap Shots, I would like to enquire about your ${serviceTitle} service.`
     );
-    window.open(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${text}`, '_blank');
+    openExternalUrl(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${text}`);
   };
 
   return (

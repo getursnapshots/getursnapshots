@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, MessageSquare } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
+import { openExternalUrl } from '../utils/navigationHelper';
 
 interface Props {
   children: ReactNode;
@@ -33,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const text = encodeURIComponent(
       'Hi Snap Shots Team, I encountered a display issue on the website and would like assistance.'
     );
-    window.open(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${text}`, '_blank');
+    openExternalUrl(`https://wa.me/${siteConfig.business.whatsapp.replace(/[^0-9]/g, '')}?text=${text}`);
   };
 
   public render() {

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <!-- Home Page / Main Showcase -->
+  <url>
+    <loc>https://getursnapshots.com/</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <!-- Brand Logo -->
+    <image:image>
+      <image:loc>https://getursnapshots.com/logo.png</image:loc>
+      <image:title>Snap Shots Visual Media Studio</image:title>
+      <image:caption>Snap Shots - Premium Event Videography &amp; Photography</image:caption>
+    </image:image>
+    <!-- Curated Portfolio Images -->
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-1.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 1 - Event Highlights</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-2.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 2 - Candid Moments</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-3.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 3 - Celebration &amp; Party</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-4.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 4 - Wedding Aesthetics</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-5.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 5 - Portraiture &amp; Emotion</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-6.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 6 - Event Storytelling</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-7.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 7 - Dynamic Live Capture</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-8.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 8 - Festive Celebrations</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-9.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 9 - Cinematic Moments</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://getursnapshots.com/images/portfolio-10.jpg</image:loc>
+      <image:title>Snap Shots Portfolio Showcase 10 - Signature Edits</image:title>
+    </image:image>
+  </url>
+
+  <!-- Dedicated Services Page -->
+  <url>
+    <loc>https://getursnapshots.com/services</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Dedicated FAQs Page -->
+  <url>
+    <loc>https://getursnapshots.com/faqs</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Dedicated Contact Us Page -->
+  <url>
+    <loc>https://getursnapshots.com/contact</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

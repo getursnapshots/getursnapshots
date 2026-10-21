@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Send, CheckCheck } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { X, Send, CheckCheck, MessageSquare } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
+import { trackWhatsAppInteraction } from '../services/analyticsService';
 
 interface ChatMessage {
   id: string;
@@ -13,7 +15,107 @@ interface ChatMessage {
 
 interface FloatingWhatsAppProps {
   onOpenBooking?: () => void;
+  defaultMessage?: string;
 }
+
+/**
+ * Returns a page-specific pre-filled message, greeting, and context label
+ * based on the active route or page section.
+ */
+export function getContextualWhatsAppMessage(pathname: string, hash: string = ''): {
+  prefilledText: string;
+  botGreeting: string;
+  contextTag: string;
+} {
+  const cleanPath = (pathname || '').toLowerCase();
+  const cleanHash = (hash || '').toLowerCase();
+
+  if (cleanPath.startsWith('/services')) {
+    return {
+      prefilledText: 'I am interested in your photography services',
+      botGreeting: 'Hello there! 👋 Interested in our photography or videography services? Chat with us!',
+      contextTag: 'Services',
+    };
+  }
+
+  if (cleanPath.startsWith('/contact')) {
+    return {
+      prefilledText: 'Hi Snap Shots, I would like to get in touch regarding a shoot booking.',
+      botGreeting: 'Hello! 👋 Looking to connect with our team? Send us your inquiry right here.',
+      contextTag: 'Contact',
+    };
+  }
+
+  if (cleanPath.startsWith('/faqs')) {
+    return {
+      prefilledText: 'Hi Snap Shots, I have a few questions about your shoot process and packages.',
+      botGreeting: 'Hello! 👋 Have any questions about our packages or deliverables? Ask away!',
+      contextTag: 'FAQs',
+    };
+  }
+
+  if (cleanHash === '#pricing' || cleanHash.includes('pricing')) {
+    return {
+      prefilledText: 'Hi Snap Shots, I am checking out your pricing packages and would like to check availability.',
+      botGreeting: 'Hello! 👋 Looking for package pricing and shoot availability? Let us know!',
+      contextTag: 'Pricing',
+    };
+  }
+
+  if (cleanHash === '#past-work' || cleanHash === '#portfolio' || cleanHash.includes('work')) {
+    return {
+      prefilledText: 'Hi Snap Shots, I loved your portfolio gallery and would love to book a shoot.',
+      botGreeting: 'Hello! 👋 Loved what you saw in our portfolio? We would love to capture your moments!',
+      contextTag: 'Portfolio',
+    };
+  }
+
+  // Default Home
+  return {
+    prefilledText: 'Hello Snap Shots! 👋 I would like to inquire about booking a shoot.',
+    botGreeting: 'Hello there! 👋\nHow can we help you today?',
+    contextTag: 'Snap Shots',
+  };
+}
+
+export interface QuickActionItem {
+  id: string;
+  label: string;
+  message: string;
+}
+
+export const QUICK_ACTIONS: QuickActionItem[] = [
+  {
+    id: 'pricing',
+    label: 'Pricing',
+    message: 'Hi Snap Shots! Could you please share your shoot packages and pricing details?',
+  },
+  {
+    id: 'availability',
+    label: 'Availability',
+    message: 'Hi Snap Shots! I would like to check creator availability for an upcoming shoot.',
+  },
+  {
+    id: 'portfolio',
+    label: 'Portfolio',
+    message: 'Hi Snap Shots! Could you share your latest event reels and video portfolio?',
+  },
+  {
+    id: 'services',
+    label: 'Services',
+    message: 'I am interested in your photography and videography services.',
+  },
+  {
+    id: 'book',
+    label: 'Book Shoot',
+    message: 'Hello Snap Shots! 👋 I would like to book a shoot with your team.',
+  },
+  {
+    id: 'custom',
+    label: 'Custom Quote',
+    message: 'Hi Snap Shots! I need a custom quote for a multi-day event.',
+  },
+];
 
 // Authentic WhatsApp Phone-in-Bubble SVG Icon
 export const WhatsAppIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
@@ -32,9 +134,13 @@ const getFormattedTime = () => {
   return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
-export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
+export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ defaultMessage }) => {
+  const location = useLocation();
+  const contextualData = getContextualWhatsAppMessage(location.pathname, location.hash);
+  const activePrefill = defaultMessage || contextualData.prefilledText;
+
   const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState(activePrefill);
   const [unreadBadge, setUnreadBadge] = useState(1);
   const [isTyping, setIsTyping] = useState(false);
 
@@ -46,6 +152,7 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
   const hasReceivedReplyRef = useRef<boolean>(false);
   const latestWhatsappUrlRef = useRef<string>('');
   const isOpenRef = useRef<boolean>(isOpen);
+  const previousPrefillRef = useRef<string>(activePrefill);
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -59,16 +166,47 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
     };
   }, []);
 
-  // Exact theme, sender name "Snap Shots", message and time matching reference template
+  // Update welcome greeting and input value dynamically when user navigates pages
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'msg-welcome',
       sender: 'bot',
       name: 'Snap Shots',
-      text: 'Hello there! 👋\nHow can we help you?',
+      text: contextualData.botGreeting,
       time: '13:23',
     },
   ]);
+
+  // Synchronize prefilled message and bot greeting with current route
+  useEffect(() => {
+    if (!firstUserMessageSentRef.current) {
+      setMessages([
+        {
+          id: `msg-welcome-${location.pathname}-${location.hash}`,
+          sender: 'bot',
+          name: 'Snap Shots',
+          text: contextualData.botGreeting,
+          time: getFormattedTime(),
+        },
+      ]);
+
+      // If user hasn't typed their own custom text yet, keep the input pre-filled with the active page's message
+      if (!inputValue || inputValue === previousPrefillRef.current) {
+        setInputValue(activePrefill);
+        previousPrefillRef.current = activePrefill;
+      }
+    }
+  }, [location.pathname, location.hash, activePrefill, contextualData.botGreeting]);
+
+  // Ensure input has the page's prefilled message when chat opens
+  useEffect(() => {
+    if (isOpen) {
+      if (!inputValue.trim() || inputValue === previousPrefillRef.current) {
+        setInputValue(activePrefill);
+        previousPrefillRef.current = activePrefill;
+      }
+    }
+  }, [isOpen, activePrefill]);
 
   // Scroll to latest message
   useEffect(() => {
@@ -89,9 +227,17 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
 
   const toggleChat = useCallback((e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    setIsOpen((prev) => !prev);
+    setIsOpen((prev) => {
+      const next = !prev;
+      trackWhatsAppInteraction({
+        action: next ? 'open_widget' : 'close_widget',
+        pagePath: location.pathname,
+        contextTag: contextualData.contextTag,
+      });
+      return next;
+    });
     setUnreadBadge(0);
-  }, []);
+  }, [location.pathname, contextualData.contextTag]);
 
   // Universal helper to redirect to WhatsApp with user text
   const redirectToWhatsApp = useCallback((text: string) => {
@@ -107,28 +253,35 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
       link.click();
       document.body.removeChild(link);
     } catch {
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      window.location.href = whatsappUrl;
     }
 
     return whatsappUrl;
   }, []);
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = (textToSend?: string, isChipTrigger?: boolean, chipLabel?: string) => {
     const text = (textToSend || inputValue).trim();
     if (!text) return;
+
+    // Track interaction with Firebase Analytics
+    trackWhatsAppInteraction({
+      action: isChipTrigger ? 'click_suggested_chip' : 'send_message',
+      pagePath: location.pathname,
+      contextTag: chipLabel || contextualData.contextTag,
+      messagePreview: text.slice(0, 80),
+    });
+
+    // Trigger redirect to WhatsApp with user's message
+    const targetUrl = redirectToWhatsApp(text);
+    latestWhatsappUrlRef.current = targetUrl;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
       text,
       time: getFormattedTime(),
+      customUrl: targetUrl,
     };
-
-    setInputValue('');
-
-    // Trigger redirect to WhatsApp with user's message
-    const targetUrl = redirectToWhatsApp(text);
-    latestWhatsappUrlRef.current = targetUrl;
 
     // Append user message to in-site chat stream
     setMessages((prev) => [...prev, userMsg]);
@@ -181,7 +334,7 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
         <div
           role="dialog"
           aria-label="WhatsApp live chat widget"
-          className="w-[calc(100vw-32px)] max-w-[240px] sm:max-w-[255px] h-[210px] sm:h-[225px] rounded-xl overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] border border-black/10 bg-[#e5ddd5] flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          className="w-[calc(100vw-32px)] max-w-[260px] sm:max-w-[285px] h-[255px] sm:h-[280px] rounded-xl overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] border border-black/10 bg-[#e5ddd5] flex flex-col animate-in fade-in zoom-in-95 duration-200"
           style={{
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
           }}
@@ -315,7 +468,43 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
               </div>
             )}
 
+            {/* Contextual Quick Suggestion Pill for Current Page */}
+            {!firstUserMessageSentRef.current && (
+              <div className="flex flex-col items-start pt-1 pb-0.5 animate-in fade-in duration-200">
+                <span className="text-[8.5px] text-[#54656f] font-semibold mb-0.5 px-0.5">
+                  Suggested for {contextualData.contextTag}:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage(activePrefill, true)}
+                  className="group inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white hover:bg-[#d9fdd3] text-[#075E54] border border-[#075E54]/25 text-[10px] font-medium shadow-xs transition-colors cursor-pointer text-left max-w-full"
+                  title="Click to send this pre-filled message"
+                >
+                  <span className="truncate">&quot;{activePrefill}&quot;</span>
+                  <Send className="w-2.5 h-2.5 shrink-0 text-[#25D366] group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
+          </div>
+
+          {/* Horizontal Scrollable Quick Action Chips Bar */}
+          <div
+            className="px-2 py-1.5 bg-[#f0f2f5] border-t border-[#d1d7db]/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 select-none"
+            aria-label="Quick Action Intent Chips"
+          >
+            {QUICK_ACTIONS.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                onClick={() => handleSendMessage(action.message, true, action.label)}
+                title={`Send: "${action.message}"`}
+                className="shrink-0 px-2.5 py-1 rounded-full bg-white hover:bg-[#25D366] text-[#111b21] hover:text-white border border-[#d1d7db] hover:border-[#25D366] text-[10px] font-semibold shadow-2xs hover:shadow-xs transition-all duration-150 cursor-pointer flex items-center gap-1 active:scale-95"
+              >
+                <span>{action.label}</span>
+              </button>
+            ))}
           </div>
 
           {/* Footer Input Area - Compact White Background */}
@@ -356,11 +545,11 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
       )}
 
       {/* Floating Action Button - Decreased Compact Dimensions */}
-      <a
-        href="#whatsapp-chat"
-        role="button"
+      <button
+        type="button"
         onClick={toggleChat}
-        aria-label="Open WhatsApp Chat"
+        aria-label={`Open WhatsApp Chat - ${activePrefill}`}
+        title={`WhatsApp: ${activePrefill}`}
         className="relative flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-[#25D366] hover:bg-[#20ba5a] active:bg-[#1caa52] text-white shadow-[0_4px_18px_rgba(37,211,102,0.4)] hover:shadow-[0_6px_22px_rgba(37,211,102,0.55)] hover:scale-110 active:scale-95 transition-all duration-300 ring-2 ring-white/20 cursor-pointer"
         id="floating-whatsapp-btn"
       >
@@ -373,7 +562,7 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = () => {
 
         {/* Floating WhatsApp Icon */}
         <WhatsAppIcon className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white relative z-10 drop-shadow-sm" />
-      </a>
+      </button>
     </div>
   );
 };

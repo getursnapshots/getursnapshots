@@ -1,6 +1,7 @@
 import { BookingFormData } from '../types';
 import { bookingConfig, siteConfig } from '../config/siteConfig';
 import { saveBookingToFirestore } from '../config/firebase';
+import { trackLeadConversion } from '../services/analyticsService';
 
 /**
  * Clean validation function for the booking form.
@@ -188,8 +189,34 @@ export async function submitBookingRequest(
   let assignedLeadId = `LEAD-${Date.now()}`;
 
   try {
-    // 1. Send to server-side lead ingestion & email dispatcher
-    let serverSaved = false;
+    // 1. Guaranteed direct write to Firebase Firestore ('bookings' collection)
+    let firestoreDocId: string | undefined;
+    try {
+      firestoreDocId = await saveBookingToFirestore({
+        clientName: data.name,
+        phone: data.phone,
+        email: data.email || undefined,
+        service: data.service,
+        package: data.packageName || undefined,
+        price: data.price || undefined,
+        eventDate: data.date,
+        time: data.time || undefined,
+        duration: data.duration || undefined,
+        city: data.location || undefined,
+        country: data.country || undefined,
+        couponCode: data.couponCode || undefined,
+        requirements: data.requirements || undefined,
+        source: 'Website Booking Engine',
+      });
+      if (firestoreDocId) {
+        assignedLeadId = `LEAD-${firestoreDocId}`;
+        console.log(`[FIREBASE FIRESTORE SUCCESS] Lead registered with Firestore ID: ${firestoreDocId}`);
+      }
+    } catch (firebaseErr) {
+      console.error('Firebase Firestore direct lead save error:', firebaseErr);
+    }
+
+    // 2. Dispatch to server-side lead ingestion & email dispatcher
     try {
       const resp = await fetch('/api/send-lead', {
         method: 'POST',
@@ -197,6 +224,7 @@ export async function submitBookingRequest(
         body: JSON.stringify({
           ...data,
           leadId: assignedLeadId,
+          firestoreId: firestoreDocId,
           submittedAt: new Date().toISOString(),
           recipient: targetRecipient,
         }),
@@ -204,33 +232,12 @@ export async function submitBookingRequest(
 
       if (resp.ok) {
         const result = await resp.json();
-        if (result.leadId) assignedLeadId = result.leadId;
-        serverSaved = true;
-        console.log(`[LEAD SUCCESS] Lead dispatched to ${targetRecipient}:`, result);
+        console.log(`[LEAD DISPATCH] Lead dispatched to server notifications:`, result);
       } else {
         console.warn(`[LEAD SERVER STATUS] Server responded with ${resp.status}`);
       }
     } catch (serverErr) {
-      console.warn('Backend /api/send-lead request error (falling back to storage):', serverErr);
-    }
-
-    // 2. Client-side Firestore fallback only if server endpoint was unreachable
-    if (!serverSaved) {
-      try {
-        await saveBookingToFirestore({
-          clientName: data.name,
-          phone: data.phone,
-          email: data.email || undefined,
-          service: data.service,
-          package: data.packageName || undefined,
-          eventDate: data.date,
-          city: data.location || undefined,
-          country: data.country || undefined,
-          requirements: data.requirements || undefined,
-        });
-      } catch (firebaseErr) {
-        console.warn('Could not persist booking to Firebase fallback:', firebaseErr);
-      }
+      console.warn('Backend /api/send-lead request notice:', serverErr);
     }
 
     // 3. If a webhook URL is configured, send POST
@@ -264,6 +271,14 @@ export async function submitBookingRequest(
     } catch {
       // Non-critical local storage fallback
     }
+
+    // 5. Track lead conversion in Firebase Analytics
+    trackLeadConversion({
+      leadId: assignedLeadId,
+      service: data.service,
+      package: data.packageName,
+      country: data.country,
+    });
 
     return {
       success: true,
