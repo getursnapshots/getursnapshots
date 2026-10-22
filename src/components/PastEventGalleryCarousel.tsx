@@ -6,8 +6,11 @@ import {
   X,
 } from 'lucide-react';
 import { getResponsiveImageSrcSet } from '../utils/imageUtils';
-
-import { galleryImages } from '../config/galleryConfig';
+import {
+  galleryImages,
+  galleryFullImages,
+  galleryItems,
+} from '../config/galleryConfig';
 import { useGalleryPreload } from '../hooks/useGalleryPreload';
 
 interface PastEventGalleryCarouselProps {
@@ -19,17 +22,27 @@ const GALLERY_IMAGES = galleryImages;
 interface GalleryImageCardProps {
   imgUrl: string;
   originalIndex: number;
+  itemIndex: number;
   onOpenModal: (index: number) => void;
 }
 
 const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
   imgUrl,
   originalIndex,
+  itemIndex,
   onOpenModal,
 }) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const item = galleryItems[originalIndex] || {
+    id: `portfolio-${originalIndex + 1}`,
+    thumb: imgUrl,
+    full: imgUrl,
+    fallback: imgUrl,
+    alt: `Snap Shots portfolio showcase ${originalIndex + 1}`,
+  };
 
   useEffect(() => {
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
@@ -37,10 +50,17 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
     }
   }, [imgUrl]);
 
+  // Eager load and give high fetch priority to initial visible cards (first 6)
+  const isPriority = itemIndex < 6;
+
   return (
     <div
       onClick={() => onOpenModal(originalIndex)}
       className="relative shrink-0 w-48 sm:w-64 md:w-72 aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 hover:border-[#bd1616]/60 shadow-lg hover:shadow-2xl hover:shadow-[#bd1616]/10 transition-all duration-300 cursor-pointer group hover:scale-[1.03] select-none"
+      style={{
+        transform: 'translateZ(0)',
+        contain: 'paint layout',
+      }}
     >
       {/* Loading Skeleton */}
       {!isLoaded && !hasError && (
@@ -49,23 +69,31 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
         </div>
       )}
 
-      {/* Main Image */}
+      {/* Main Image with WebP picture element */}
       {!hasError && (
-        <img
-          ref={imgRef}
-          src={imgUrl}
-          srcSet={getResponsiveImageSrcSet(imgUrl, [320, 480, 640, 800])}
-          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 280px, 320px"
-          alt={`Snap Shots portfolio showcase ${originalIndex + 1}`}
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          onLoad={() => setIsLoaded(true)}
-          onError={() => setHasError(true)}
-          className={`w-full h-full object-cover transition-all duration-500 ease-out group-hover:scale-108 pointer-events-none ${
-            isLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
-        />
+        <picture className="w-full h-full block">
+          <source type="image/webp" srcSet={item.thumb} />
+          <img
+            ref={imgRef}
+            src={item.fallback || item.thumb}
+            srcSet={getResponsiveImageSrcSet(imgUrl, [320, 480, 640, 800])}
+            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 280px, 320px"
+            alt={item.alt || `Snap Shots portfolio showcase ${originalIndex + 1}`}
+            loading={isPriority ? 'eager' : 'lazy'}
+            fetchPriority={isPriority ? 'high' : 'auto'}
+            decoding={isPriority ? 'sync' : 'async'}
+            draggable={false}
+            onLoad={() => setIsLoaded(true)}
+            onError={() => setHasError(true)}
+            className={`w-full h-full object-cover transition-opacity duration-300 ease-out group-hover:scale-108 pointer-events-none will-change-transform ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{
+              transform: 'translateZ(0)',
+              imageRendering: 'auto',
+            }}
+          />
+        </picture>
       )}
 
       {/* Error Fallback */}
@@ -324,6 +352,14 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
   useEffect(() => {
     if (modalImageIndex !== null) {
       preloadSurrounding(modalImageIndex, 2);
+      const nextIdx = (modalImageIndex + 1) % galleryFullImages.length;
+      const prevIdx = (modalImageIndex - 1 + galleryFullImages.length) % galleryFullImages.length;
+      const targetFulls = [galleryFullImages[modalImageIndex], galleryFullImages[nextIdx], galleryFullImages[prevIdx]].filter(Boolean);
+      targetFulls.forEach((src) => {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = src;
+      });
     }
   }, [modalImageIndex, preloadSurrounding]);
 
@@ -394,11 +430,14 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
             handlePointerUp();
           }}
           onWheel={handleWheel}
-          className="relative overflow-x-auto no-scrollbar py-2 cursor-grab active:cursor-grabbing will-change-scroll"
+          className="relative overflow-x-auto no-scrollbar py-2 cursor-grab active:cursor-grabbing will-change-scroll select-none"
           style={{
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
             overscrollBehaviorX: 'contain',
+            contentVisibility: 'auto',
+            containIntrinsicSize: '340px 100vw',
+            transform: 'translateZ(0)',
           }}
         >
           <div className="flex items-center gap-3 sm:gap-5 w-max px-4">
@@ -409,6 +448,7 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
                   key={`${imgUrl}-${idx}`}
                   imgUrl={imgUrl}
                   originalIndex={originalIndex}
+                  itemIndex={idx}
                   onOpenModal={handleCardClick}
                 />
               );
@@ -455,13 +495,22 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
               <ChevronLeft className="w-5 h-5" />
             </button>
 
-            {/* Modal Image */}
+            {/* Modal Image with high-speed WebP picture element */}
             <div className="flex flex-col items-center max-w-full">
-              <img
-                src={GALLERY_IMAGES[modalImageIndex]}
-                alt={`Enlarged portfolio showcase ${modalImageIndex + 1}`}
-                className="max-h-[80vh] max-w-full rounded-xl sm:rounded-2xl object-contain shadow-2xl border border-zinc-800"
-              />
+              <picture className="max-h-[80vh] max-w-full flex items-center justify-center">
+                <source
+                  type="image/webp"
+                  srcSet={galleryFullImages[modalImageIndex] || GALLERY_IMAGES[modalImageIndex]}
+                />
+                <img
+                  src={galleryItems[modalImageIndex]?.fallback || GALLERY_IMAGES[modalImageIndex]}
+                  alt={`Enlarged portfolio showcase ${modalImageIndex + 1}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="sync"
+                  className="max-h-[80vh] max-w-full rounded-xl sm:rounded-2xl object-contain shadow-2xl border border-zinc-800"
+                />
+              </picture>
               <div className="mt-3 px-3 py-1 rounded-full bg-black/70 border border-white/10 text-xs text-zinc-300 font-medium tracking-wide">
                 Photo {modalImageIndex + 1} of {GALLERY_IMAGES.length}
               </div>
