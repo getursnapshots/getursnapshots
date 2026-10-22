@@ -127,6 +127,20 @@ async function startServer() {
     limits: { fileSize: 200 * 1024 * 1024 }, // 200MB limit
   });
 
+  const preloadStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, videosDir);
+    },
+    filename: (_req, _file, cb) => {
+      cb(null, 'preload.mp4');
+    },
+  });
+
+  const uploadPreload = multer({
+    storage: preloadStorage,
+    limits: { fileSize: 250 * 1024 * 1024 }, // 250MB limit
+  });
+
   // API endpoint 1: Upload via multipart/form-data (high performance, stream direct to disk)
   app.post(
     '/api/upload-video-file',
@@ -213,6 +227,96 @@ async function startServer() {
       }
     }
   );
+
+  // Preloader Video API: Upload / set custom preloader video
+  app.post(
+    '/api/upload-preload-video',
+    uploadLimiter,
+    uploadPreload.single('video'),
+    async (req, res) => {
+      try {
+        const configPath = path.resolve(__dirname, 'public/preload-config.json');
+
+        if (req.body?.directUrl) {
+          const directUrl = req.body.directUrl.trim();
+          fs.writeFileSync(configPath, JSON.stringify({ videoUrl: directUrl, updatedAt: new Date().toISOString() }, null, 2), 'utf-8');
+          syncToDist({ preloadVideo: directUrl });
+          return res.json({ success: true, videoUrl: directUrl });
+        }
+
+        if (!req.file) {
+          return res.status(400).json({ error: 'No video file or URL provided for preloader' });
+        }
+
+        const permanentVideoUrl = '/videos/preload.mp4';
+        const distVideosDir = path.resolve(__dirname, 'dist/videos');
+        if (!fs.existsSync(distVideosDir)) {
+          fs.mkdirSync(distVideosDir, { recursive: true });
+        }
+        try {
+          fs.copyFileSync(req.file.path, path.join(distVideosDir, 'preload.mp4'));
+        } catch {}
+
+        fs.writeFileSync(
+          configPath,
+          JSON.stringify({ videoUrl: permanentVideoUrl, updatedAt: new Date().toISOString() }, null, 2),
+          'utf-8'
+        );
+        syncToDist({ preloadVideo: permanentVideoUrl });
+
+        console.log('[Upload-Preload] Preload video saved successfully to /videos/preload.mp4');
+        return res.json({ success: true, videoUrl: permanentVideoUrl });
+      } catch (err: any) {
+        console.error('Error saving preload video:', err);
+        return res.status(500).json({ error: err.message || 'Failed to upload preload video' });
+      }
+    }
+  );
+
+  // Preloader Video API: Query active preload video
+  app.get('/api/preload-video', (_req, res) => {
+    try {
+      const configPath = path.resolve(__dirname, 'public/preload-config.json');
+      if (fs.existsSync(configPath)) {
+        try {
+          const conf = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+          if (conf?.videoUrl) {
+            return res.json({ hasVideo: true, videoUrl: conf.videoUrl });
+          }
+        } catch {}
+      }
+
+      const filePath = path.join(videosDir, 'preload.mp4');
+      if (fs.existsSync(filePath)) {
+        return res.json({ hasVideo: true, videoUrl: '/videos/preload.mp4' });
+      }
+
+      return res.json({ hasVideo: false, videoUrl: null });
+    } catch {
+      return res.json({ hasVideo: false, videoUrl: null });
+    }
+  });
+
+  // Preloader Video API: Reset to default animated logo
+  app.post('/api/reset-preload-video', (_req, res) => {
+    try {
+      const configPath = path.resolve(__dirname, 'public/preload-config.json');
+      if (fs.existsSync(configPath)) {
+        try {
+          fs.unlinkSync(configPath);
+        } catch {}
+      }
+      const filePath = path.join(videosDir, 'preload.mp4');
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch {}
+      }
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
 
   // API endpoint 2: Upload / replace video via Base64 or Direct URL (fallback)
   app.post('/api/upload-video', uploadLimiter, async (req, res) => {

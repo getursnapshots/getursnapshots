@@ -9,7 +9,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
-import { WelcomePopup } from './components/WelcomePopup';
+import { SitePreloader } from './components/SitePreloader';
 import { LogoProvider } from './context/LogoContext';
 import { CountryProvider } from './context/CountryContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
@@ -221,8 +221,8 @@ function MainAppLayout() {
         </Suspense>
       )}
 
-      {/* Timed Welcome Privilege Offer Popup */}
-      <WelcomePopup onClaimOffer={() => openBookingModal(undefined, undefined, 'SNAP15')} />
+      {/* Cinematic Site Preloader with Brand Logo Animation */}
+      <SitePreloader />
 
       {/* Admin Login Modal - Lazy loaded */}
       <Suspense fallback={null}>
