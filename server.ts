@@ -13,7 +13,8 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  // Dev server must always run on port 3000 in AI Studio environment
+  const PORT = 3000;
 
   // Gzip / Deflate response compression for ultra-fast text/json/asset transfer
   app.use(compression());
@@ -527,7 +528,7 @@ async function startServer() {
   } else {
     // Mount Vite middlewares in development
     const vite = await createViteServer({
-      server: { middlewareMode: true, port: Number(PORT), host: '0.0.0.0' },
+      server: { middlewareMode: true, hmr: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);

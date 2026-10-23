@@ -69,13 +69,15 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
         </div>
       )}
 
-      {/* Main Image with WebP picture element */}
+      {/* Main Image with responsive picture element */}
       {!hasError && (
         <picture className="w-full h-full block">
-          <source type="image/webp" srcSet={item.thumb} />
+          {item.thumb?.endsWith('.webp') && (
+            <source type="image/webp" srcSet={item.thumb} />
+          )}
           <img
             ref={imgRef}
-            src={item.fallback || item.thumb}
+            src={item.thumb || item.fallback}
             srcSet={getResponsiveImageSrcSet(imgUrl, [320, 480, 640, 800])}
             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 280px, 320px"
             alt={item.alt || `Snap Shots portfolio showcase ${originalIndex + 1}`}
@@ -495,15 +497,17 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
               <ChevronLeft className="w-5 h-5" />
             </button>
 
-            {/* Modal Image with high-speed WebP picture element */}
+            {/* Modal Image with high-speed picture element */}
             <div className="flex flex-col items-center max-w-full">
               <picture className="max-h-[80vh] max-w-full flex items-center justify-center">
-                <source
-                  type="image/webp"
-                  srcSet={galleryFullImages[modalImageIndex] || GALLERY_IMAGES[modalImageIndex]}
-                />
+                {(galleryFullImages[modalImageIndex] || GALLERY_IMAGES[modalImageIndex])?.endsWith('.webp') && (
+                  <source
+                    type="image/webp"
+                    srcSet={galleryFullImages[modalImageIndex] || GALLERY_IMAGES[modalImageIndex]}
+                  />
+                )}
                 <img
-                  src={galleryItems[modalImageIndex]?.fallback || GALLERY_IMAGES[modalImageIndex]}
+                  src={galleryFullImages[modalImageIndex] || galleryItems[modalImageIndex]?.full || galleryItems[modalImageIndex]?.fallback || GALLERY_IMAGES[modalImageIndex]}
                   alt={`Enlarged portfolio showcase ${modalImageIndex + 1}`}
                   loading="eager"
                   fetchPriority="high"
