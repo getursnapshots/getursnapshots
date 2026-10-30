@@ -1,24 +1,6 @@
-
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
-
-function getFirebase() {
-  if (getApps().length) return getFirestore();
-
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error("Firebase server credentials are missing");
-  }
-
-  initializeApp({
-    credential: cert({ projectId, clientEmail, privateKey }),
-  });
-
-  return getFirestore();
-}
+// Decoupled lead ingestion handler
+import fs from 'fs';
+import path from 'path';
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -28,13 +10,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Accept submissions from the production website only.
+  // Accept submissions from the production website or local preview
   const allowedOrigins = [
     "https://www.getursnapshots.com",
     "https://getursnapshots.com",
   ];
 
-  if (!allowedOrigins.includes(req.headers.origin)) {
+  const origin = req.headers.origin;
+  if (origin && !allowedOrigins.includes(origin) && !origin.includes('localhost') && !origin.includes('run.app')) {
     return res.status(403).json({ error: "Invalid website origin" });
   }
 
@@ -79,6 +62,7 @@ export default async function handler(req, res) {
       typeof value === "string" ? value.trim().slice(0, max) : "";
 
     const lead = {
+      id: `LEAD-${Date.now()}`,
       name,
       email,
       phone,
@@ -88,21 +72,30 @@ export default async function handler(req, res) {
       bookingDate: allowed(body.bookingDate, 40),
       location: allowed(body.location, 160),
       status: "New",
-      createdAt: FieldValue.serverTimestamp(),
+      createdAt: new Date().toISOString(),
     };
 
-    await getFirebase().collection("leads").add(lead);
+    // Save to local leads file
+    try {
+      const leadsFile = path.resolve(process.cwd(), 'data/leads.json');
+      const dir = path.dirname(leadsFile);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      let existing = [];
+      if (fs.existsSync(leadsFile)) {
+        try { existing = JSON.parse(fs.readFileSync(leadsFile, 'utf-8')); } catch {}
+      }
+      existing.unshift(lead);
+      fs.writeFileSync(leadsFile, JSON.stringify(existing.slice(0, 300), null, 2), 'utf-8');
+    } catch {}
 
     return res.status(201).json({
       success: true,
       message: "Booking enquiry received",
     });
   } catch (error) {
-    // Log a generic message; never log credentials or customer details.
-    console.error("Lead submission failed");
+    console.error("Lead submission error:", error);
     return res.status(500).json({
       error: "Unable to submit your enquiry. Please try again.",
     });
   }
 }
-

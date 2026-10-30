@@ -1,46 +1,37 @@
-import { getAnalytics, logEvent, isSupported, Analytics } from 'firebase/analytics';
-import { app } from '../config/firebase';
-
-let analyticsInstance: Analytics | null = null;
-let initPromise: Promise<Analytics | null> | null = null;
-
 /**
- * Initializes Firebase Analytics safely (checks browser support & window context).
+ * Analytics Service (Decoupled from Firebase)
+ * Provides safe in-browser event logging and conversion tracking.
  */
-export async function getFirebaseAnalytics(): Promise<Analytics | null> {
-  if (typeof window === 'undefined') return null;
-  if (analyticsInstance) return analyticsInstance;
-  if (initPromise) return initPromise;
 
-  initPromise = (async () => {
-    try {
-      const supported = await isSupported();
-      if (supported) {
-        analyticsInstance = getAnalytics(app);
-        return analyticsInstance;
-      }
-    } catch (err) {
-      console.warn('[ANALYTICS NOTICE] Firebase Analytics not supported or blocked in this environment:', err);
-    }
-    return null;
-  })();
-
-  return initPromise;
+export interface AnalyticsEvent {
+  name: string;
+  params?: Record<string, string | number | boolean | undefined>;
+  timestamp: string;
 }
 
 /**
- * Safe generic event logger with Firebase Analytics.
+ * Safe generic event logger (decoupled from external services).
  */
 export async function trackEvent(
   eventName: string,
   eventParams?: Record<string, string | number | boolean | undefined>
 ): Promise<void> {
   try {
-    const analytics = await getFirebaseAnalytics();
-    if (analytics) {
-      logEvent(analytics, eventName, eventParams);
-    }
-  } catch (err) {
+    if (typeof window === 'undefined') return;
+
+    // Dispatches a custom window event for any listening analytics integrations
+    const eventDetail: AnalyticsEvent = {
+      name: eventName,
+      params: eventParams,
+      timestamp: new Date().toISOString(),
+    };
+
+    window.dispatchEvent(
+      new CustomEvent('snapshots:analytics', {
+        detail: eventDetail,
+      })
+    );
+  } catch {
     // Non-blocking telemetry notice
   }
 }

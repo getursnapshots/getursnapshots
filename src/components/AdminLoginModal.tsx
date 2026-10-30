@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   LogOut,
-  Sparkles,
   RefreshCw,
   Phone,
   Calendar,
@@ -17,10 +16,18 @@ import {
   Clock,
   ArrowUpRight,
   UserCheck,
+  Search,
+  Download,
+  Filter,
+  Layers,
+  ChevronDown,
+  Database,
+  ExternalLink,
+  Tag,
+  Video,
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { WhatsAppIcon } from './icons/WhatsAppIcon';
-import { fetchBookingsFromFirestore } from '../config/firebase';
 
 export const AdminLoginModal: React.FC = () => {
   const {
@@ -29,20 +36,27 @@ export const AdminLoginModal: React.FC = () => {
     isLoginModalOpen,
     setIsLoginModalOpen,
     loginWithEmailPassword,
-    loginWithGoogle,
     getIdToken,
+    updateBookingStatus,
     logout,
   } = useAdminAuth();
 
+  // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Leads state
   const [leads, setLeads] = useState<any[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tools' | 'leads'>('tools');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'tools'>('bookings');
+  const [updatingLeadId, setUpdatingLeadId] = useState<string | null>(null);
+  const [exportToast, setExportToast] = useState<string | null>(null);
 
   const handleClose = () => {
     setIsLoginModalOpen(false);
@@ -54,60 +68,34 @@ export const AdminLoginModal: React.FC = () => {
     setIsLoadingLeads(true);
     setError(null);
     try {
-      // 1. Primary: Direct fetch from Firebase Firestore ('bookings' collection)
-      try {
-        const firestoreLeads = await fetchBookingsFromFirestore();
-        if (firestoreLeads && firestoreLeads.length > 0) {
-          setLeads(
-            firestoreLeads.map((item) => ({
-              id: item.id,
-              name: item.clientName,
-              clientName: item.clientName,
-              phone: item.phone,
-              email: item.email || '',
-              service: item.service,
-              package: item.package || '',
-              price: item.price || '',
-              date: item.eventDate || '',
-              time: item.time || '',
-              duration: item.duration || '',
-              location: item.city || '',
-              country: item.country || '',
-              couponCode: item.couponCode || '',
-              requirements: item.requirements || '',
-              status: item.status || 'pending',
-              submittedAt: item.createdAt || '',
-              createdAt: item.createdAt || '',
-            }))
-          );
+      const token = await getIdToken();
+      const res = await fetch('/api/leads', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.leads && Array.isArray(data.leads)) {
+          setLeads(data.leads);
           setIsLoadingLeads(false);
           return;
         }
-      } catch (firestoreErr) {
-        console.warn('Direct Firestore leads query notice (trying fallback endpoint):', firestoreErr);
       }
 
-      // 2. Secondary fallback: Query /api/leads endpoint
-      const token = await getIdToken();
-      if (!token) {
-        setError('Please sign in with your Firebase admin account to view leads.');
-        setLeads([]);
-        return;
-      }
+      // Fallback: check localStorage
+      try {
+        const stored = localStorage.getItem('snapshots_user_bookings');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLeads(parsed);
+            setIsLoadingLeads(false);
+            return;
+          }
+        }
+      } catch {}
 
-      const res = await fetch('/api/leads', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setLeads(data.leads || []);
-      } else {
-        setError(data.error || `Error ${res.status}: You are not authorized to view leads.`);
-        setLeads([]);
-      }
+      setLeads([]);
     } catch (e: any) {
       console.warn('Could not fetch leads:', e);
       setError('Network error while retrieving leads. Please try again.');
@@ -116,396 +104,322 @@ export const AdminLoginModal: React.FC = () => {
     }
   };
 
-  // When modal is opened or tab changed to leads and user is logged in
+  // Re-fetch leads when modal opens
   useEffect(() => {
-    if (currentUser && isLoginModalOpen && activeTab === 'leads') {
+    if (isLoginModalOpen && isAdmin) {
       fetchLeads();
     }
-  }, [currentUser, isLoginModalOpen, activeTab]);
+  }, [isLoginModalOpen, isAdmin]);
 
-  const handleEmailPasswordSubmit = async (e: React.FormEvent) => {
+
+  // Handle administrator login
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
-    const cleanEmail = email.trim();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setError('Please enter a valid administrator email address.');
-      return;
-    }
-    if (!password) {
-      setError('Please enter your account password.');
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your administrator email and password.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const res = await loginWithEmailPassword(cleanEmail, password);
-      if (res.success) {
-        setSuccessMessage('Admin access granted! Live video tools are unlocked.');
+      const result = await loginWithEmailPassword(email, password);
+      if (result.success) {
+        setSuccessMessage('Logged in successfully!');
+        setEmail('');
         setPassword('');
-        // Automatically switch to tools or stay on modal
+        fetchLeads();
       } else {
-        setError(res.error || 'Authentication failed. Please verify credentials.');
+        setError(result.error || 'Invalid administrator email or password.');
       }
+    } catch (err: any) {
+      setError(err?.message || 'Login failed.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setError(null);
-    setIsLoading(true);
+  // Handle status update for a booking
+  const handleStatusChange = async (
+    bookingId: string,
+    newStatus: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  ) => {
+    setUpdatingLeadId(bookingId);
     try {
-      const res = await loginWithGoogle();
-      if (res.success) {
-        setSuccessMessage('Signed in with Google! Admin tools unlocked.');
-      } else {
-        setError(res.error || 'Google sign-in could not be completed.');
+      const ok = await updateBookingStatus(bookingId, newStatus);
+      if (ok) {
+        setLeads((prev) =>
+          prev.map((lead) => (lead.id === bookingId ? { ...lead, status: newStatus } : lead))
+        );
       }
+    } catch (err) {
+      console.warn('Error updating booking status:', err);
     } finally {
-      setIsLoading(false);
+      setUpdatingLeadId(null);
     }
   };
 
-  const handleLogout = async () => {
-    setIsLoading(true);
-    try {
-      await logout();
-      setLeads([]);
-      setSuccessMessage('Logged out from Admin mode.');
-      setTimeout(() => {
-        handleClose();
-      }, 1000);
-    } finally {
-      setIsLoading(false);
-    }
+  // Export CSV of collected appointment bookings for record-keeping
+  const handleExportCSV = (exportMode: 'all' | 'filtered' = 'all') => {
+    const targetRecords = exportMode === 'filtered' ? filteredLeads : leads;
+    if (targetRecords.length === 0) return;
+
+    const headers = [
+      'Lead ID',
+      'Status',
+      'Client Name',
+      'Phone Number',
+      'Email Address',
+      'Shoot Service',
+      'Package Name',
+      'Package Price',
+      'Event Date',
+      'Preferred Time',
+      'Duration',
+      'Shoot Location',
+      'Country',
+      'Coupon Code',
+      'Discount Applied',
+      'Client Requirements / Notes',
+      'Lead Source',
+      'Submitted At (ISO)',
+      'Submitted At (Formatted)',
+      'Delivered To Email',
+    ];
+
+    const escapeCSV = (val: unknown): string => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = targetRecords.map((l) => {
+      const rawDate = l.submittedAt || l.createdAt;
+      let formattedDate = '';
+      if (rawDate) {
+        try {
+          formattedDate = new Date(rawDate).toLocaleString('en-US', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          });
+        } catch {
+          formattedDate = String(rawDate);
+        }
+      }
+
+      const cleanNotes = (l.requirements || l.message || '').replace(/\r?\n/g, ' ').trim();
+
+      return [
+        escapeCSV(l.id || l.leadId || ''),
+        escapeCSV(l.status || 'pending'),
+        escapeCSV(l.name || l.clientName || 'Anonymous Client'),
+        escapeCSV(l.phone || ''),
+        escapeCSV(l.email || ''),
+        escapeCSV(l.service || 'General Shoot'),
+        escapeCSV(l.package || l.packageName || 'Custom'),
+        escapeCSV(l.price || ''),
+        escapeCSV(l.date || l.eventDate || 'Flexible'),
+        escapeCSV(l.time || 'Flexible'),
+        escapeCSV(l.duration || 'Standard'),
+        escapeCSV(l.location || l.city || 'Pending venue'),
+        escapeCSV(l.country || 'India'),
+        escapeCSV(l.couponCode || 'None'),
+        escapeCSV(l.discountApplied || 'None'),
+        escapeCSV(cleanNotes),
+        escapeCSV(l.source || 'Website Booking Form'),
+        escapeCSV(rawDate || ''),
+        escapeCSV(formattedDate),
+        escapeCSV(l.deliveredTo || 'getursnapshots@gmail.com'),
+      ];
+    });
+
+    // Prepend UTF-8 BOM (\uFEFF) for immediate compatibility with Excel, Numbers & Google Sheets
+    const csvContent =
+      '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename =
+      exportMode === 'filtered'
+        ? `SnapShots_Filtered_Appointments_${dateStr}.csv`
+        : `SnapShots_All_Appointments_${dateStr}.csv`;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setExportToast(
+      `Successfully exported ${targetRecords.length} ${
+        exportMode === 'filtered' ? 'filtered ' : ''
+      }appointment record${targetRecords.length === 1 ? '' : 's'} as CSV.`
+    );
+    setTimeout(() => {
+      setExportToast(null);
+    }, 4500);
   };
 
   if (!isLoginModalOpen) return null;
+
+  // Filter leads based on search query and status filter
+  const filteredLeads = leads.filter((lead) => {
+    const matchesStatus = statusFilter === 'all' || (lead.status || 'pending').toLowerCase() === statusFilter;
+    if (!matchesStatus) return false;
+
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const nameMatch = (lead.name || lead.clientName || '').toLowerCase().includes(q);
+    const phoneMatch = (lead.phone || '').toLowerCase().includes(q);
+    const emailMatch = (lead.email || '').toLowerCase().includes(q);
+    const serviceMatch = (lead.service || '').toLowerCase().includes(q);
+    const locationMatch = (lead.location || lead.city || '').toLowerCase().includes(q);
+    return nameMatch || phoneMatch || emailMatch || serviceMatch || locationMatch;
+  });
+
+  const countPending = leads.filter((l) => (l.status || 'pending') === 'pending').length;
+  const countConfirmed = leads.filter((l) => l.status === 'confirmed').length;
+  const countCompleted = leads.filter((l) => l.status === 'completed').length;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="admin-login-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      aria-labelledby="admin-panel-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
     >
-      {/* Click outside to close */}
-      <div className="fixed inset-0 -z-10" onClick={handleClose} aria-hidden="true" />
-
-      <div className="relative w-full max-w-lg max-h-[92vh] flex flex-col rounded-3xl bg-zinc-950 border border-zinc-800 shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden">
-        {/* Header Brand Bar */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-[#750d0d] via-[#bd1616] to-[#ffc800] shrink-0" />
-
-        <div className="p-5 sm:p-6 flex flex-col flex-1 overflow-hidden space-y-4">
-          {/* Top Title & Close Button */}
-          <div className="flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#bd1616]/20 border border-[#bd1616]/40 flex items-center justify-center text-[#bd1616] shadow-md">
-                <Shield className="w-5 h-5 text-[#bd1616]" />
-              </div>
-              <div>
-                <h2 id="admin-login-title" className="text-base font-black text-white">
-                  Snap Shots Admin Portal
-                </h2>
-                <p className="text-xs text-zinc-400">
-                  {currentUser
-                    ? `Logged in as ${currentUser.email}`
-                    : 'Secure Firebase authentication for studio coordinators'}
-                </p>
-              </div>
+      <div
+        className={`relative w-full ${
+          isAdmin ? 'max-w-5xl h-[92vh]' : 'max-w-md'
+        } bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl shadow-black/90 flex flex-col overflow-hidden text-zinc-100 transition-all`}
+      >
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/80 bg-zinc-900/60 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#bd1616]/15 border border-[#bd1616]/40 flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5 text-[#bd1616]" />
             </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 id="admin-panel-title" className="text-base font-black text-white tracking-wide">
+                  Snap Shots Admin Console
+                </h2>
+                {isAdmin && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Supabase Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-400">
+                {isAdmin
+                  ? `Authenticated as ${currentUser?.email || 'Master Administrator'}`
+                  : 'Studio Administrator Access • Sign In to View Bookings'}
+              </p>
+            </div>
+          </div>
 
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={logout}
+                className="px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleClose}
-              className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
-              aria-label="Close Admin Modal"
+              className="p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
+        </div>
 
-          {/* Success Toast */}
-          {successMessage && (
-            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs shrink-0 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="font-semibold">{successMessage}</span>
-            </div>
-          )}
-
-          {/* Error Notice */}
-          {error && (
-            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-red-950/80 border border-red-500/50 text-red-300 text-xs shrink-0 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-[#bd1616] shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Logged In View (Tabs: Admin Tools vs Leads) */}
-          {currentUser ? (
-            <div className="flex flex-col flex-1 overflow-hidden space-y-3">
-              {/* Tab Switcher */}
-              <div className="flex border-b border-zinc-800 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('tools')}
-                  className={`pb-2.5 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
-                    activeTab === 'tools'
-                      ? 'border-[#bd1616] text-white'
-                      : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  Admin Tools
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('leads');
-                    fetchLeads();
-                  }}
-                  className={`pb-2.5 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors flex items-center gap-1.5 cursor-pointer ${
-                    activeTab === 'leads'
-                      ? 'border-[#bd1616] text-white'
-                      : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  <Mail className="w-3.5 h-3.5 text-[#ffc800]" />
-                  <span>Firestore Leads ({leads.length})</span>
-                </button>
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* ========================================================================= */}
+          {/* ADMINISTRATOR SIGN IN (SIGN UP REMOVED)                                    */}
+          {/* ========================================================================= */}
+          {!isAdmin && (
+            <div className="p-6 sm:p-8 space-y-6">
+              <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 text-xs flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#bd1616]/15 text-[#bd1616] shrink-0 border border-[#bd1616]/30">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-xs">Studio Administrator Login</h3>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+                    Sign in with your administrator credentials to manage live bookings, customer data, and video reels.
+                  </p>
+                </div>
               </div>
 
-              {activeTab === 'tools' ? (
-                <div className="space-y-4 py-2 overflow-y-auto">
-                  <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                        Authenticated via Firebase
-                      </span>
-                    </div>
-                    <div className="text-xs text-zinc-300 flex items-center gap-2">
-                      <UserCheck className="w-4 h-4 text-[#ffc800]" />
-                      <span>
-                        Account: <strong className="text-white">{currentUser.email}</strong>
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed">
-                      Your administrator credentials have unlocked live reel editing and direct video upload tools. Scroll to the &ldquo;Work That Performs&rdquo; section to replace video files or link direct URLs.
-                    </p>
-                    <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400">Leads destination:</span>
-                      <strong className="text-[#ffc800]">getursnapshots@gmail.com</strong>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="flex-1 py-2.5 rounded-full bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-                    >
-                      Manage Videos Now
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={isLoading}
-                      className="px-4 py-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white font-bold text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <LogOut className="w-3.5 h-3.5 text-red-400" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Leads Management Tab */
-                <div className="flex flex-col flex-1 overflow-hidden space-y-3">
-                  <div className="flex items-center justify-between shrink-0">
-                    <div className="text-[11px] text-zinc-400">
-                      Destination: <strong className="text-[#ffc800]">getursnapshots@gmail.com</strong>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={fetchLeads}
-                      disabled={isLoadingLeads}
-                      className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 cursor-pointer bg-zinc-900 px-2.5 py-1 rounded-full border border-zinc-800 transition-colors"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isLoadingLeads ? 'animate-spin text-[#bd1616]' : ''}`} />
-                      <span>{isLoadingLeads ? 'Loading...' : 'Refresh'}</span>
-                    </button>
-                  </div>
-
-                  {isLoadingLeads ? (
-                    <div className="py-12 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800/80 text-xs text-zinc-400 flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-5 h-5 animate-spin text-[#bd1616]" />
-                      <span>Loading leads from Firestore...</span>
-                    </div>
-                  ) : leads.length === 0 ? (
-                    <div className="py-10 text-center bg-zinc-900/40 rounded-2xl border border-zinc-800/80 text-xs text-zinc-400 space-y-1">
-                      <p className="font-semibold text-zinc-300">No leads found in Firestore database.</p>
-                      <p className="text-[11px]">Submit a test booking using the website form to verify ingestion.</p>
-                    </div>
-                  ) : (
-                    <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-                      {leads.map((l: any, idx: number) => {
-                        const cleanPhone = (l.phone || '').replace(/[^0-9]/g, '');
-                        return (
-                          <div
-                            key={l.id || idx}
-                            className="p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 text-xs space-y-2 hover:border-zinc-700 transition-colors"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <span className="text-white font-bold text-sm block">
-                                  {l.name || l.clientName || 'Anonymous Client'}
-                                </span>
-                                <span className="text-[10px] text-zinc-500 font-mono">
-                                  ID: {l.id || l.leadId || `LEAD-${idx}`}
-                                </span>
-                              </div>
-                              <span className="text-[10px] text-zinc-400 font-medium px-2 py-0.5 rounded-md bg-zinc-800 border border-zinc-700/60">
-                                {l.submittedAt || l.createdAt
-                                  ? new Date(l.submittedAt || l.createdAt).toLocaleDateString(undefined, {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })
-                                  : 'Recent'}
-                              </span>
-                            </div>
-
-                            {/* Details Grid */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-zinc-300 text-[11px] pt-1 border-t border-zinc-800/60">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-zinc-500 font-semibold">Service:</span>
-                                <span className="text-[#ffc800] font-medium">{l.service || 'Shoot'}</span>
-                              </div>
-                              {l.package || l.packageName ? (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-zinc-500 font-semibold">Package:</span>
-                                  <span>{l.package || l.packageName}</span>
-                                </div>
-                              ) : null}
-                              {l.date || l.eventDate ? (
-                                <div className="flex items-center gap-1.5">
-                                  <Calendar className="w-3 h-3 text-zinc-500" />
-                                  <span>{l.date || l.eventDate}</span>
-                                </div>
-                              ) : null}
-                              {l.location || l.city ? (
-                                <div className="flex items-center gap-1.5">
-                                  <MapPin className="w-3 h-3 text-zinc-500" />
-                                  <span className="truncate">{l.location || l.city}</span>
-                                </div>
-                              ) : null}
-                            </div>
-
-                            {/* Requirements Notes */}
-                            {l.requirements && (
-                              <p className="text-[11px] text-zinc-300 bg-black/50 p-2 rounded-xl border border-zinc-800/80 leading-relaxed">
-                                &ldquo;{l.requirements}&rdquo;
-                              </p>
-                            )}
-
-                            {/* Actions bar */}
-                            <div className="pt-2 flex items-center justify-between border-t border-zinc-800/60 text-[11px]">
-                              <div className="flex items-center gap-2">
-                                {cleanPhone && (
-                                  <a
-                                    href={`https://wa.me/${cleanPhone}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/40 text-[#25D366] font-semibold text-[10px] transition-colors"
-                                  >
-                                    <WhatsAppIcon className="w-3 h-3 text-[#25D366]" />
-                                    <span>WhatsApp</span>
-                                  </a>
-                                )}
-                                {cleanPhone && (
-                                  <a
-                                    href={`tel:${cleanPhone}`}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-semibold transition-colors"
-                                  >
-                                    <Phone className="w-3 h-3" />
-                                    <span>{cleanPhone}</span>
-                                  </a>
-                                )}
-                                {l.email && (
-                                  <a
-                                    href={`mailto:${l.email}`}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-semibold transition-colors"
-                                  >
-                                    <Mail className="w-3 h-3" />
-                                    <span>Email</span>
-                                  </a>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
-                                {l.status || 'pending'}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+              {error && (
+                <div className="p-3.5 rounded-2xl bg-red-950/60 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{error}</span>
                 </div>
               )}
-            </div>
-          ) : (
-            /* Login Form: Firebase Email & Password */
-            <div className="space-y-4 py-1">
-              <form onSubmit={handleEmailPasswordSubmit} className="space-y-3.5">
+
+              {successMessage && (
+                <div className="p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>{successMessage}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label
-                    htmlFor="admin-email-input"
-                    className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
-                  >
-                    Admin Email
+                  <label className="block text-xs font-bold text-zinc-300 mb-1.5">
+                    Admin Email Address
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                      <Mail className="w-4 h-4 text-[#bd1616]" />
-                    </div>
+                    <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
-                      id="admin-email-input"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@getursnapshots.com"
-                      autoComplete="email"
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#bd1616] transition-colors"
-                      autoFocus
+                      placeholder="e.g. pavansid749@gmail.com or getursnapshots@gmail.com"
+                      required
+                      autoComplete="username"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#bd1616] transition-colors"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="admin-password-input"
-                    className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5"
-                  >
+                  <label className="block text-xs font-bold text-zinc-300 mb-1.5">
                     Password
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
-                      <Lock className="w-4 h-4 text-[#bd1616]" />
-                    </div>
+                    <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
-                      id="admin-password-input"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
+                      placeholder="Enter administrator password"
+                      required
                       autoComplete="current-password"
-                      className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#bd1616] transition-colors"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#bd1616] transition-colors"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-white cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -515,60 +429,408 @@ export const AdminLoginModal: React.FC = () => {
 
                 <button
                   type="submit"
-                  id="admin-email-login-btn"
                   disabled={isLoading}
-                  className="w-full h-10 rounded-full bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#bd1616]/30 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer border border-[#9e1212] flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3 rounded-full bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#bd1616]/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
                 >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>{isLoading ? 'Verifying...' : 'Sign In with Firebase'}</span>
+                  <Lock className="w-4 h-4" />
+                  <span>{isLoading ? 'Verifying Credentials...' : 'Sign In to Admin Panel'}</span>
                 </button>
               </form>
 
-              {/* Divider */}
-              <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-800" />
+              <div className="pt-2 text-center text-[11px] text-zinc-500">
+                <span>Secure access protected by encrypted server session authentication.</span>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* STATE 3: FULL ADMIN PANEL & BOOKINGS DASHBOARD                            */}
+          {/* ========================================================================= */}
+          {isAdmin && (
+            <div className="p-4 sm:p-6 space-y-5">
+              {/* Sub-Header Tabs & Quick Actions */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('bookings')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                      activeTab === 'bookings'
+                        ? 'bg-[#bd1616] text-white shadow-md shadow-[#bd1616]/20'
+                        : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Website Bookings ({leads.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('tools')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                      activeTab === 'tools'
+                        ? 'bg-[#bd1616] text-white shadow-md shadow-[#bd1616]/20'
+                        : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Reels & Video Manager</span>
+                  </button>
                 </div>
-                <div className="relative px-3 bg-zinc-950 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                  Or
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleExportCSV('all')}
+                    disabled={leads.length === 0}
+                    className="px-3.5 py-1.5 rounded-xl bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-[#bd1616]/25 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed group"
+                    title="Download all collected appointment data as CSV for record-keeping"
+                    id="admin-download-csv-btn"
+                  >
+                    <Download className="w-3.5 h-3.5 text-white group-hover:scale-110 transition-transform" />
+                    <span>Download as CSV</span>
+                    {leads.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-black/30 text-[10px] text-white/95 font-mono font-bold">
+                        {leads.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={fetchLeads}
+                    disabled={isLoadingLeads}
+                    className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Refresh bookings list from Supabase & local storage"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLeads ? 'animate-spin text-[#bd1616]' : ''}`} />
+                    <span className="hidden sm:inline">{isLoadingLeads ? 'Refreshing...' : 'Refresh'}</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Google Sign-in Alternative */}
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                id="admin-google-login-btn"
-                className="w-full h-10 rounded-full bg-zinc-900 hover:bg-zinc-850 active:bg-zinc-800 text-white font-bold text-xs border border-zinc-700/80 hover:border-zinc-600 transition-all cursor-pointer flex items-center justify-center gap-2.5 active:scale-[0.98] disabled:opacity-50"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Sign in with Google</span>
-              </button>
+              {activeTab === 'bookings' && (
+                <div className="space-y-4">
+                  {/* KPI Metric Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800/90 space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
+                        Total Inquiries
+                      </span>
+                      <div className="text-xl font-black text-white">{leads.length}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">
+                        Pending
+                      </span>
+                      <div className="text-xl font-black text-amber-300">{countPending}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+                        Confirmed
+                      </span>
+                      <div className="text-xl font-black text-emerald-300">{countConfirmed}</div>
+                    </div>
+                    <div className="p-3.5 rounded-2xl bg-blue-950/20 border border-blue-500/30 space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider">
+                        Completed
+                      </span>
+                      <div className="text-xl font-black text-blue-300">{countCompleted}</div>
+                    </div>
+                  </div>
 
-              <div className="pt-1 text-center">
-                <p className="text-[11px] text-zinc-500">
-                  <Sparkles className="w-3 h-3 text-[#ffc800] inline-block mr-1" />
-                  Authorized admin access unlocks live video editing and Firestore leads inbox.
-                </p>
-              </div>
+                  {/* Export Feedback Toast */}
+                  {exportToast && (
+                    <div className="p-3 rounded-2xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="font-semibold">{exportToast}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setExportToast(null)}
+                        className="text-emerald-400 hover:text-white text-xs font-bold cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Search and Status Filters */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search by client name, phone, email, shoot service, location..."
+                        className="w-full pl-10 pr-4 py-2 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#bd1616] transition-colors"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 shrink-0">
+                      {(['all', 'pending', 'confirmed', 'completed', 'cancelled'] as const).map((st) => (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setStatusFilter(st)}
+                          className={`px-3 py-1.5 rounded-lg text-[11px] font-bold capitalize transition-colors cursor-pointer ${
+                            statusFilter === st
+                              ? 'bg-zinc-200 text-black font-extrabold shadow-sm'
+                              : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                          }`}
+                        >
+                          {st}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Results Count & Filtered CSV Export Link */}
+                  {leads.length > 0 && (
+                    <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+                      <span className="text-[11px]">
+                        Showing <strong className="text-white">{filteredLeads.length}</strong> of{' '}
+                        <strong className="text-white">{leads.length}</strong> appointment records
+                      </span>
+                      {filteredLeads.length > 0 && filteredLeads.length < leads.length && (
+                        <button
+                          type="button"
+                          onClick={() => handleExportCSV('filtered')}
+                          className="text-[11px] text-[#ffc800] hover:text-white flex items-center gap-1 font-bold cursor-pointer transition-colors"
+                          title="Download only the currently filtered records as CSV"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>Download Filtered View ({filteredLeads.length})</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bookings List */}
+                  {isLoadingLeads ? (
+                    <div className="py-20 text-center bg-zinc-900/40 rounded-3xl border border-zinc-800/80 flex flex-col items-center justify-center gap-3">
+                      <RefreshCw className="w-6 h-6 animate-spin text-[#bd1616]" />
+                      <span className="text-xs text-zinc-400">Loading bookings from Supabase & server database...</span>
+                    </div>
+                  ) : filteredLeads.length === 0 ? (
+                    <div className="py-20 text-center bg-zinc-900/40 rounded-3xl border border-zinc-800/80 space-y-2">
+                      <p className="font-bold text-sm text-zinc-300">
+                        {leads.length === 0 ? 'No bookings received yet.' : 'No bookings matched your filter.'}
+                      </p>
+                      <p className="text-xs text-zinc-500 max-w-md mx-auto">
+                        {leads.length === 0
+                          ? 'When a visitor books via the appointment booking form, details will appear here live and sync to your Supabase backend.'
+                          : 'Try clearing your search query or switching status filters.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredLeads.map((item, idx) => {
+                        const cleanPhone = (item.phone || '').replace(/[^0-9]/g, '');
+                        const waLink = cleanPhone ? `https://wa.me/${cleanPhone}` : undefined;
+                        const mailLink = item.email ? `mailto:${item.email}` : undefined;
+                        const leadId = item.id || item.leadId || `LEAD-${idx}`;
+                        const currentStatus = item.status || 'pending';
+
+                        return (
+                          <div
+                            key={leadId}
+                            className="p-4 sm:p-5 rounded-2xl bg-zinc-900/90 border border-zinc-800/90 hover:border-zinc-700 transition-all space-y-3.5"
+                          >
+                            {/* Card Header: Client name, status badge, timestamp */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800/60 pb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#bd1616] to-[#750d0d] flex items-center justify-center text-white font-black text-xs shrink-0 shadow-md">
+                                  {(item.name || item.clientName || 'C').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-sm text-white">
+                                      {item.name || item.clientName || 'Anonymous Client'}
+                                    </h3>
+                                    {item.couponCode && (
+                                      <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 font-mono font-bold">
+                                        Coupon: {item.couponCode}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-zinc-500 font-mono block">
+                                    ID: {leadId} &bull; Received: {new Date(item.submittedAt || item.createdAt || Date.now()).toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Interactive Status Selector */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
+                                  Status:
+                                </span>
+                                <select
+                                  value={currentStatus}
+                                  disabled={updatingLeadId === leadId}
+                                  onChange={(e) =>
+                                    handleStatusChange(
+                                      leadId,
+                                      e.target.value as 'pending' | 'confirmed' | 'completed' | 'cancelled'
+                                    )
+                                  }
+                                  className={`text-xs font-bold rounded-lg px-2.5 py-1 border transition-colors cursor-pointer focus:outline-none ${
+                                    currentStatus === 'confirmed'
+                                      ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                                      : currentStatus === 'completed'
+                                      ? 'bg-blue-950/80 border-blue-500/40 text-blue-300'
+                                      : currentStatus === 'cancelled'
+                                      ? 'bg-red-950/80 border-red-500/40 text-red-300'
+                                      : 'bg-amber-950/80 border-amber-500/40 text-amber-300'
+                                  }`}
+                                >
+                                  <option value="pending" className="bg-zinc-900 text-amber-300">
+                                    Pending
+                                  </option>
+                                  <option value="confirmed" className="bg-zinc-900 text-emerald-300">
+                                    Confirmed
+                                  </option>
+                                  <option value="completed" className="bg-zinc-900 text-blue-300">
+                                    Completed
+                                  </option>
+                                  <option value="cancelled" className="bg-zinc-900 text-red-300">
+                                    Cancelled
+                                  </option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Shoot Details Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase">Service</span>
+                                <div className="font-bold text-[#bd1616] truncate">
+                                  {item.service || 'General Shoot'}
+                                </div>
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase">Package & Price</span>
+                                <div className="text-zinc-200 truncate">
+                                  {item.package || item.packageName || 'Custom'} {item.price ? `(${item.price})` : ''}
+                                </div>
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase">Preferred Date & Time</span>
+                                <div className="text-zinc-200 truncate flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-zinc-500" />
+                                  <span>{item.date || item.eventDate || 'Flexible'} {item.time ? `• ${item.time}` : ''}</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase">Shoot Location</span>
+                                <div className="text-zinc-200 truncate flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 text-zinc-500" />
+                                  <span>{item.location || item.city || 'Pending'} {item.country ? `(${item.country})` : ''}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Client Notes / Special Instructions if any */}
+                            {(item.requirements || item.message) && (
+                              <div className="p-3 rounded-xl bg-zinc-950/70 border border-zinc-800/60 text-xs text-zinc-300 space-y-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
+                                  Client Instructions:
+                                </span>
+                                <p className="leading-relaxed whitespace-pre-wrap">
+                                  {item.requirements || item.message}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Card Footer: Quick 1-Click Client Contact CTAs */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-800/40 text-xs">
+                              <div className="flex items-center gap-3 text-zinc-400">
+                                {item.phone && (
+                                  <span className="font-mono text-zinc-300">
+                                    📞 {item.phone}
+                                  </span>
+                                )}
+                                {item.email && (
+                                  <span className="font-mono text-zinc-400 truncate max-w-[200px]">
+                                    ✉️ {item.email}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {waLink && (
+                                  <a
+                                    href={waLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-transform hover:scale-105"
+                                  >
+                                    <WhatsAppIcon className="w-3.5 h-3.5 fill-black" />
+                                    <span>WhatsApp Client</span>
+                                  </a>
+                                )}
+                                {mailLink && (
+                                  <a
+                                    href={mailLink}
+                                    className="px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs inline-flex items-center gap-1.5 transition-colors"
+                                  >
+                                    <Mail className="w-3.5 h-3.5 text-[#ffc800]" />
+                                    <span>Email Client</span>
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tools Tab: Video Management Instructions */}
+              {activeTab === 'tools' && (
+                <div className="space-y-4">
+                  <div className="p-5 rounded-2xl bg-zinc-900/90 border border-zinc-800 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Video className="w-5 h-5 text-[#bd1616]" />
+                      <h4 className="font-bold text-sm text-white">Live Reel Video & Preload Management</h4>
+                    </div>
+                    <p className="text-xs text-zinc-300 leading-relaxed">
+                      As an authenticated administrator, you have unlocked the live video editing controls across the entire website.
+                    </p>
+                    <ul className="text-xs text-zinc-400 space-y-2 list-disc list-inside">
+                      <li>
+                        Scroll to the <strong className="text-white">&ldquo;Work That Performs&rdquo;</strong> section on the homepage.
+                      </li>
+                      <li>
+                        Hover over any video reel slide and click the floating <strong className="text-white">&ldquo;Replace Video&rdquo;</strong> button.
+                      </li>
+                      <li>
+                        Upload your high-definition MP4 file directly, or paste a link from Instagram Reels, AWS S3, Cloudinary, or Google Drive.
+                      </li>
+                      <li>
+                        Click <strong className="text-white">&ldquo;Save Changes&rdquo;</strong> to lock your updates permanently into the live website.
+                      </li>
+                    </ul>
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="px-5 py-2.5 rounded-full bg-[#bd1616] hover:bg-[#9e1212] active:bg-[#750d0d] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                      >
+                        Close & Go To Homepage Videos
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

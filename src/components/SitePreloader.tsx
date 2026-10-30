@@ -6,13 +6,35 @@ interface SitePreloaderProps {
 }
 
 export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
-  const [isDone, setIsDone] = useState(false);
-  const [isRendered, setIsRendered] = useState(true);
+  const [isDone, setIsDone] = useState(() => {
+    try {
+      return sessionStorage.getItem('snapshots_preloader_seen') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isRendered, setIsRendered] = useState(() => {
+    try {
+      return sessionStorage.getItem('snapshots_preloader_seen') !== 'true';
+    } catch {
+      return true;
+    }
+  });
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const finishAndOpenSite = () => {
+    try {
+      sessionStorage.setItem('snapshots_preloader_seen', 'true');
+    } catch {}
+    setIsDone(true);
+    setTimeout(() => {
+      setIsRendered(false);
+    }, 300);
+  };
 
   // Lock body scroll while preloader video is active
   useEffect(() => {
-    if (!isDone) {
+    if (!isDone && isRendered) {
       document.body.style.overflow = 'hidden';
       window.scrollTo(0, 0);
     } else {
@@ -23,23 +45,23 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isDone, onComplete]);
+  }, [isDone, isRendered, onComplete]);
 
-  // Safety fallback: if video doesn't end or fails to start within 3.5s, smoothly open site
+  // Fast fallback: if video doesn't end or fails within 1.2s, open immediately
   useEffect(() => {
+    if (isDone || !isRendered) return;
+
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finishAndOpenSite();
+      return;
+    }
+
     const fallbackTimer = setTimeout(() => {
       finishAndOpenSite();
-    }, 3500);
+    }, 1200);
 
     return () => clearTimeout(fallbackTimer);
-  }, []);
-
-  const finishAndOpenSite = () => {
-    setIsDone(true);
-    setTimeout(() => {
-      setIsRendered(false);
-    }, 550);
-  };
+  }, [isDone, isRendered]);
 
   // When video completes playback (e.g. 1.33s), smoothly open the site
   const handleVideoEnded = () => {
@@ -50,7 +72,7 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
     finishAndOpenSite();
   };
 
-  if (!isRendered) return null;
+  if (!isRendered || isDone) return null;
 
   return (
     <AnimatePresence>

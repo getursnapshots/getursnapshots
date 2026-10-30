@@ -7,6 +7,14 @@ import multer from 'multer';
 import nodemailer from 'nodemailer';
 import compression from 'compression';
 import { processLeadSubmission, fetchAdminLeads } from './server/leadService';
+import {
+  getAdminSetupStatus,
+  registerMasterAdmin,
+  loginAdmin,
+  verifyAdminSession,
+  invalidateAdminSession,
+  updateBookingStatus,
+} from './server/adminAuth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -452,7 +460,7 @@ async function startServer() {
     }
   });
 
-  // API endpoint 6: Send & record booking lead to Firestore with deduplication, anti-bot defense & SMTP
+  // API endpoint 6: Send & record booking lead with deduplication, anti-bot defense & SMTP
   app.post('/api/send-lead', leadSubmissionLimiter, async (req, res) => {
     try {
       const result = await processLeadSubmission(req.body);
@@ -463,7 +471,7 @@ async function startServer() {
     }
   });
 
-  // API endpoint 7: Retrieve all leads from Firestore (protected: Firebase Auth ID token & admin allowlist)
+  // API endpoint 7: Retrieve all leads (protected admin route)
   app.get('/api/leads', async (req, res) => {
     try {
       const authHeader = req.headers.authorization || (req.headers.Authorization as string);
@@ -475,6 +483,64 @@ async function startServer() {
     }
   });
 
+  // Admin Route 1: Get setup status (1 slot availability)
+  app.get('/api/admin/setup-status', (_req, res) => {
+    try {
+      const status = getAdminSetupStatus();
+      return res.json(status);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Admin Route 2: Register master admin (Disabled: sign-in only)
+  app.post('/api/admin/setup', (_req, res) => {
+    return res.status(403).json({ error: 'Admin registration is disabled. Please sign in directly.' });
+  });
+
+  // Admin Route 3: Login admin
+  app.post('/api/admin/login', (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const result = loginAdmin(email, password);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(401).json({ error: err.message });
+    }
+  });
+
+  // Admin Route 4: Verify session
+  app.get('/api/admin/verify', (req, res) => {
+    const authHeader = req.headers.authorization || (req.headers.Authorization as string);
+    const verification = verifyAdminSession(authHeader);
+    if (verification.authorized) {
+      return res.json({ authorized: true, email: verification.email });
+    }
+    return res.status(401).json({ authorized: false });
+  });
+
+  // Admin Route 5: Logout
+  app.post('/api/admin/logout', (req, res) => {
+    const authHeader = req.headers.authorization || (req.headers.Authorization as string);
+    invalidateAdminSession(authHeader);
+    return res.json({ success: true });
+  });
+
+  // Admin Route 6: Update booking status (pending, confirmed, completed, cancelled)
+  app.post('/api/admin/update-status', async (req, res) => {
+    const authHeader = req.headers.authorization || (req.headers.Authorization as string);
+    const verification = verifyAdminSession(authHeader);
+    if (!verification.authorized) {
+      return res.status(401).json({ error: 'Unauthorized: Admin session required' });
+    }
+    const { bookingId, status } = req.body;
+    if (!bookingId || !status) {
+      return res.status(400).json({ error: 'bookingId and status are required' });
+    }
+    const result = await updateBookingStatus(bookingId, status);
+    return res.json(result);
+  });
+
   // High-performance static asset caching
   app.use(
     '/videos',
@@ -482,6 +548,26 @@ async function startServer() {
       maxAge: '30d',
       etag: true,
       lastModified: true,
+    })
+  );
+
+  app.use(
+    '/images',
+    express.static(path.resolve(__dirname, 'public/images'), {
+      maxAge: '30d',
+      etag: true,
+      lastModified: true,
+      immutable: true,
+    })
+  );
+
+  app.use(
+    '/assets',
+    express.static(path.resolve(__dirname, 'public/assets'), {
+      maxAge: '30d',
+      etag: true,
+      lastModified: true,
+      immutable: true,
     })
   );
 

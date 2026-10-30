@@ -11,15 +11,18 @@ import {
   Sparkles,
   ArrowUpRight,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
 import { BrandLogo } from './BrandLogo';
 import { WhatsAppIcon } from './icons/WhatsAppIcon';
+import { useAdminAuth } from '../context/AdminAuthContext';
 
 export const Footer: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setIsLoginModalOpen, isAdmin } = useAdminAuth();
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -346,6 +349,16 @@ export const Footer: React.FC = () => {
             >
               <span>Back to Top</span>
               <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <span>&bull;</span>
+            <button
+              onClick={() => setIsLoginModalOpen(true)}
+              className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors cursor-pointer group"
+              title="Studio Administrator Console"
+              aria-label="Admin Portal"
+            >
+              <Lock className={`w-3.5 h-3.5 ${isAdmin ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-[#bd1616]'} transition-colors`} />
+              <span>{isAdmin ? 'Admin Dashboard' : 'Admin Portal'}</span>
             </button>
           </div>
         </div>

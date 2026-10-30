@@ -92,6 +92,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           }}
           loading="eager"
           decoding="sync"
+          fetchPriority="high"
           className={`${
             variant === 'footer'
               ? 'h-12 sm:h-14 md:h-16 max-h-[64px]'

@@ -296,7 +296,7 @@ export const UploadVideoModal: React.FC<UploadVideoModalProps> = ({
                 </div>
               ) : (
                 <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  ✨ <span className="text-zinc-300 font-medium">Instant live website sync:</span> Paste an Instagram Reel link or direct MP4 URL (Cloudinary, AWS S3, Google Drive, Catbox). It syncs across all live website visitors instantly via Firebase!
+                  ✨ <span className="text-zinc-300 font-medium">Instant live website sync:</span> Paste an Instagram Reel link or direct MP4 URL (Cloudinary, AWS S3, Google Drive, Catbox). It syncs across all live website visitors instantly!
                 </p>
               )}
             </div>

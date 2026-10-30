@@ -127,6 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ onBookClick }) => {
                   className="h-8 sm:h-9 md:h-10 w-auto max-h-[44px] object-contain block transition-all duration-200"
                   loading="eager"
                   decoding="sync"
+                  fetchPriority="high"
                 />
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { BookingFormData } from '../types';
 import { bookingConfig, siteConfig } from '../config/siteConfig';
-import { saveBookingToFirestore } from '../config/firebase';
 import { trackLeadConversion } from '../services/analyticsService';
+import { insertBookingToSupabase } from '../config/supabase';
 
 /**
  * Clean validation function for the booking form.
@@ -179,44 +179,16 @@ export function buildMailtoUrl(
 /**
  * Robust submission handler:
  * 1. Sends directly to backend /api/send-lead (which notifies getursnapshots@gmail.com & persists)
- * 2. Saves to Firebase Firestore
- * 3. Saves to local storage fallback
+ * 2. Saves to local storage fallback
  */
 export async function submitBookingRequest(
   data: BookingFormData
 ): Promise<{ success: boolean; leadId?: string; recipient?: string; message?: string }> {
   const targetRecipient = bookingConfig.emailRecipient || 'getursnapshots@gmail.com';
-  let assignedLeadId = `LEAD-${Date.now()}`;
+  const assignedLeadId = `LEAD-${Date.now()}`;
 
   try {
-    // 1. Guaranteed direct write to Firebase Firestore ('bookings' collection)
-    let firestoreDocId: string | undefined;
-    try {
-      firestoreDocId = await saveBookingToFirestore({
-        clientName: data.name,
-        phone: data.phone,
-        email: data.email || undefined,
-        service: data.service,
-        package: data.packageName || undefined,
-        price: data.price || undefined,
-        eventDate: data.date,
-        time: data.time || undefined,
-        duration: data.duration || undefined,
-        city: data.location || undefined,
-        country: data.country || undefined,
-        couponCode: data.couponCode || undefined,
-        requirements: data.requirements || undefined,
-        source: 'Website Booking Engine',
-      });
-      if (firestoreDocId) {
-        assignedLeadId = `LEAD-${firestoreDocId}`;
-        console.log(`[FIREBASE FIRESTORE SUCCESS] Lead registered with Firestore ID: ${firestoreDocId}`);
-      }
-    } catch (firebaseErr) {
-      console.error('Firebase Firestore direct lead save error:', firebaseErr);
-    }
-
-    // 2. Dispatch to server-side lead ingestion & email dispatcher
+    // 1. Dispatch to server-side lead ingestion & email dispatcher
     try {
       const resp = await fetch('/api/send-lead', {
         method: 'POST',
@@ -224,7 +196,6 @@ export async function submitBookingRequest(
         body: JSON.stringify({
           ...data,
           leadId: assignedLeadId,
-          firestoreId: firestoreDocId,
           submittedAt: new Date().toISOString(),
           recipient: targetRecipient,
         }),
@@ -238,6 +209,33 @@ export async function submitBookingRequest(
       }
     } catch (serverErr) {
       console.warn('Backend /api/send-lead request notice:', serverErr);
+    }
+
+    // 2. Client-side direct write to Supabase backend table
+    try {
+      insertBookingToSupabase({
+        lead_id: assignedLeadId,
+        name: data.name,
+        phone: data.phone,
+        email: data.email || undefined,
+        service: data.service,
+        package: data.packageName || undefined,
+        price: data.price || undefined,
+        event_date: data.date,
+        time: data.time || undefined,
+        duration: data.duration || undefined,
+        location: data.location || undefined,
+        country: data.country || undefined,
+        coupon_code: data.couponCode || undefined,
+        discount_applied: data.discountApplied || undefined,
+        requirements: data.requirements || undefined,
+        source: 'Website Booking Form',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
+      }).catch((e) => console.warn('Supabase direct insert notice:', e));
+    } catch {
+      // Non-blocking
     }
 
     // 3. If a webhook URL is configured, send POST
@@ -272,7 +270,7 @@ export async function submitBookingRequest(
       // Non-critical local storage fallback
     }
 
-    // 5. Track lead conversion in Firebase Analytics
+    // 3. Track lead conversion
     trackLeadConversion({
       leadId: assignedLeadId,
       service: data.service,

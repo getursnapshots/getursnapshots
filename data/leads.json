@@ -20,10 +20,11 @@
     "couponCode": "",
     "discountApplied": "",
     "requirements": "",
-    "status": "pending",
+    "status": "confirmed",
     "createdAt": "2026-10-20T11:55:36.718Z",
     "submittedAt": "2026-10-20T11:55:36.718Z",
-    "deliveredTo": "getursnapshots@gmail.com"
+    "deliveredTo": "getursnapshots@gmail.com",
+    "updatedAt": "2026-10-30T04:35:43.675Z"
   },
   {
     "id": "LEAD-1792497328483-7474",

@@ -263,7 +263,7 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ defaultMessa
     const text = (textToSend || inputValue).trim();
     if (!text) return;
 
-    // Track interaction with Firebase Analytics
+    // Track interaction
     trackWhatsAppInteraction({
       action: isChipTrigger ? 'click_suggested_chip' : 'send_message',
       pagePath: location.pathname,

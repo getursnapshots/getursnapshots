@@ -387,20 +387,20 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
 
     fetchSavedSlides();
 
-    // Real-time synchronization with Firebase Firestore
-    let unsubscribeFirestore = () => {};
+    // Real-time synchronization with custom slides
+    let unsubscribeSlides = () => {};
     try {
-      unsubscribeFirestore = subscribeToSlides((firestoreSlides) => {
-        if (isMounted && Object.keys(firestoreSlides).length > 0) {
-          const cleanFirestore: Record<number, { videoUrl: string; posterUrl?: string }> = {};
-          Object.entries(firestoreSlides).forEach(([k, v]) => {
+      unsubscribeSlides = subscribeToSlides((customSlides) => {
+        if (isMounted && Object.keys(customSlides).length > 0) {
+          const cleanSlides: Record<number, { videoUrl: string; posterUrl?: string }> = {};
+          Object.entries(customSlides).forEach(([k, v]) => {
             if (v?.videoUrl && !v.videoUrl.includes('/assets/uploads/')) {
-              cleanFirestore[Number(k)] = v;
+              cleanSlides[Number(k)] = v;
             }
           });
-          if (Object.keys(cleanFirestore).length > 0) {
+          if (Object.keys(cleanSlides).length > 0) {
             setReplacedBySlide((prev) => {
-              const merged = { ...prev, ...cleanFirestore };
+              const merged = { ...prev, ...cleanSlides };
               try {
                 localStorage.setItem(
                   'snapshots_slide_replacements_strict_v5',
@@ -413,12 +413,12 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
         }
       });
     } catch (e) {
-      console.warn('Firebase slides listener not active:', e);
+      console.warn('Slides listener not active:', e);
     }
 
     return () => {
       isMounted = false;
-      unsubscribeFirestore();
+      unsubscribeSlides();
     };
   }, []);
 
@@ -562,9 +562,9 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
           return updated;
         });
 
-        // Also synchronize to Firebase Firestore for cloud persistence
+        // Also synchronize to local slide persistence
         saveSlideToFirestore(targetIndex, permanentVideoUrl, permanentPosterUrl).catch((e) =>
-          console.warn('Firebase slide sync notice:', e)
+          console.warn('Slide sync notice:', e)
         );
 
         setHasUnsavedChanges(false);
@@ -658,9 +658,9 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     if (file) {
       uploadVideoToServer(targetIndex, file, newPosterUrl);
     } else if (newVideoUrl.startsWith('http://') || newVideoUrl.startsWith('https://') || newVideoUrl.startsWith('/')) {
-      // Synchronize directly to Firebase Firestore for cloud persistence across all live visitors
+      // Synchronize directly for persistence across all live visitors
       saveSlideToFirestore(targetIndex, newVideoUrl, newPosterUrl).catch((err) =>
-        console.warn('Firebase slide sync notice:', err)
+        console.warn('Slide sync notice:', err)
       );
 
       // Also persist to server endpoint if running
@@ -707,10 +707,10 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
         body: JSON.stringify({ slides: cleanSlides }),
       });
 
-      // Synchronize to Firebase Firestore in cloud
+      // Synchronize slides state
       Object.entries(cleanSlides).forEach(([k, v]) => {
         saveSlideToFirestore(Number(k), v.videoUrl, v.posterUrl).catch((e) =>
-          console.warn('Firebase batch sync notice:', e)
+          console.warn('Slide batch sync notice:', e)
         );
       });
 

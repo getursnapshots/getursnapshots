@@ -348,6 +348,7 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
     batchSize: 4,
     direction: 'horizontal',
     loop: true,
+    enabled: isInView,
   });
 
   // Preload adjacent images when a user opens the lightbox modal
