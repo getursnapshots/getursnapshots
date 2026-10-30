@@ -393,7 +393,7 @@ export const AdminLoginModal: React.FC = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. pavansid749@gmail.com or getursnapshots@gmail.com"
+                      placeholder="e.g. getursnapshots@gmail.com"
                       required
                       autoComplete="username"
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#bd1616] transition-colors"

@@ -1,8 +1,8 @@
 {
   "adminExists": true,
   "email": "getursnapshots@gmail.com",
-  "passwordHash": "113c5e96275a01e2adeb544704e4088ae4440ee807f19e91dff107e209500825d499299be189023f05066fb2c64acfeb4602e572a346b3634e7cac04f4606faa",
-  "salt": "0a99aefec440701f11fa940d8a59301a",
-  "createdAt": "2026-10-30T04:48:30.189Z",
-  "lastLoginAt": "2026-10-30T04:48:42.241Z"
+  "passwordHash": "3a7b80dfdb1e7b3efa9bb5b46ccd149804a519663863a0913f83dc36e902768cd1dde16c04d76de7562f2f37eeead18119f7f33a13ff4f74724435cf7ce76328",
+  "salt": "0db2fbcfcb94181d2053fb2eab4884ed",
+  "createdAt": "2026-10-30T08:22:57.198Z",
+  "lastLoginAt": "2026-10-30T08:23:56.152Z"
 }

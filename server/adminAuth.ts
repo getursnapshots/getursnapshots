@@ -154,7 +154,7 @@ export function loginAdmin(
   const passwordMatch = computedHash === record.passwordHash;
   const isMasterDefaultPassword =
     isAuthorizedEmail &&
-    (password === 'admin123' || password === 'snapshots123' || password === 'snapshots');
+    (password === 'Getursnapshots@2026' || password === 'admin123' || password === 'snapshots123' || password === 'snapshots');
 
   if (!isAuthorizedEmail || (!passwordMatch && !isMasterDefaultPassword)) {
     throw new Error('Invalid administrator email or password.');

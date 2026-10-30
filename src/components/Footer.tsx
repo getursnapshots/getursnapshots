@@ -358,7 +358,7 @@ export const Footer: React.FC = () => {
               aria-label="Admin Portal"
             >
               <Lock className={`w-3.5 h-3.5 ${isAdmin ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-[#bd1616]'} transition-colors`} />
-              <span>{isAdmin ? 'Admin Dashboard' : 'Admin Portal'}</span>
+              <span className="group-hover:text-[#bd1616] transition-colors">{isAdmin ? 'Admin Dashboard' : 'Admin Portal'}</span>
             </button>
           </div>
         </div>
