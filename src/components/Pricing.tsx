@@ -143,21 +143,12 @@ export const Pricing: React.FC<PricingProps> = ({ onSelectPackage }) => {
                     {/* Plan Title */}
                     <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">{pkg.name}</h3>
 
-                    {/* Cut Offer Price Section with Countdown Animation */}
+                    {/* Price Section */}
                     <div className="mt-3 pb-4 border-b border-zinc-800">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg sm:text-xl font-bold text-zinc-500 line-through decoration-[#bd1616] decoration-2">
-                          {getPackageOriginalPrice(pkg.id)}
-                        </span>
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#bd1616] bg-[#bd1616]/15 border border-[#bd1616]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#bd1616] animate-ping" />
-                          Price Drop
-                        </span>
-                      </div>
                       <div className="flex items-baseline gap-1.5">
                         <AnimatedPriceCountdown
                           key={`${pkg.id}-${country}`}
-                          startPrice={getPackageOriginalPriceNum(pkg.id)}
+                          startPrice={getPackagePriceNum(pkg.id)}
                           targetPrice={getPackagePriceNum(pkg.id)}
                           currencySymbol={countryConfig.symbol}
                           currencyCode={countryConfig.currency}
@@ -166,6 +157,11 @@ export const Pricing: React.FC<PricingProps> = ({ onSelectPackage }) => {
                           className="text-3xl sm:text-4xl"
                         />
                       </div>
+                      {pkg.id === 'hourly-plan' && (
+                        <p className="mt-2 text-[11px] sm:text-xs text-[#ffc800] font-medium leading-snug">
+                          * Note: This price is not applicable for any type of events.
+                        </p>
+                      )}
                     </div>
 
                     {/* Description */}

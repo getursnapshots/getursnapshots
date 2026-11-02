@@ -96,7 +96,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
               const isSelected = item.code === country;
               const rateDescription =
                 item.code === 'IN'
-                  ? 'Starts at ₹1,499 (Telangana & India)'
+                  ? 'Starts at ₹1,999 (Telangana & India)'
                   : 'Starts at $99 (USA Nationwide)';
 
               return (

@@ -48,12 +48,12 @@ export const PRICING_CONFIG: Record<SupportedCountryCode, CountryPricingConfig> 
     shortLabel: 'India (₹)',
     whatsappCountryName: 'India',
     packages: {
-      quickShot: 1499,          // Hourly Plan offer price: ₹1,499
-      quickShotOriginal: 1999,  // Hourly Plan original cut price: ₹1,999
-      eventReel: 4499,          // Half Day Plan offer price: ₹4,499
-      eventReelOriginal: 4999,  // Half Day Plan original cut price: ₹4,999
-      fullContent: 999,         // Add On's offer price: ₹999
-      fullContentOriginal: 1250,// Add On's original cut price: ₹1,250
+      quickShot: 1999,          // Hourly Plan price: ₹1,999
+      quickShotOriginal: 1999,  // Hourly Plan price: ₹1,999
+      eventReel: 4999,          // Half Day Plan price: ₹4,999
+      eventReelOriginal: 4999,  // Half Day Plan price: ₹4,999
+      fullContent: 1249,        // Add On's price: ₹1,249
+      fullContentOriginal: 1249,// Add On's price: ₹1,249
     },
   },
 
