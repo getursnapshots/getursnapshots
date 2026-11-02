@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Check, Sparkles, ArrowUpRight, ShieldCheck, Heart } from 'lucide-react';
+import { Check, Sparkles, ArrowUpRight, Heart } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { PackageItem } from '../types';
 import { useCountry } from '../context/CountryContext';
-import { AnimatedPriceCountdown } from './AnimatedPriceCountdown';
 import { OfferCountdownTimer } from './OfferCountdownTimer';
 
 interface PricingProps {
@@ -12,15 +11,7 @@ interface PricingProps {
 
 export const Pricing: React.FC<PricingProps> = ({ onSelectPackage }) => {
   const [activeTab, setActiveTab] = useState<'standard' | 'wedding'>('standard');
-  const {
-    country,
-    setCountry,
-    getPackagePrice,
-    getPackageOriginalPrice,
-    getPackagePriceNum,
-    getPackageOriginalPriceNum,
-    countryConfig,
-  } = useCountry();
+  const { country, setCountry } = useCountry();
 
   return (
     <section id="pricing" className="bg-transparent py-10 sm:py-14 relative overflow-hidden border-y border-zinc-900/80">
@@ -143,25 +134,17 @@ export const Pricing: React.FC<PricingProps> = ({ onSelectPackage }) => {
                     {/* Plan Title */}
                     <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">{pkg.name}</h3>
 
-                    {/* Price Section */}
+                    {/* Price Section: Custom Pricing */}
                     <div className="mt-3 pb-4 border-b border-zinc-800">
-                      <div className="flex items-baseline gap-1.5">
-                        <AnimatedPriceCountdown
-                          key={`${pkg.id}-${country}`}
-                          startPrice={getPackagePriceNum(pkg.id)}
-                          targetPrice={getPackagePriceNum(pkg.id)}
-                          currencySymbol={countryConfig.symbol}
-                          currencyCode={countryConfig.currency}
-                          countDirection="down"
-                          duration={1600}
-                          className="text-3xl sm:text-4xl"
-                        />
+                      <span className="inline-block text-xs font-bold uppercase tracking-wider text-[#bd1616]">
+                        Custom Pricing
+                      </span>
+                      <div className="mt-1 text-2xl sm:text-3xl font-black text-white tracking-tight">
+                        Contact Us for Pricing
                       </div>
-                      {pkg.id === 'hourly-plan' && (
-                        <p className="mt-2 text-[11px] sm:text-xs text-[#ffc800] font-medium leading-snug">
-                          * Note: This price is not applicable for any type of events.
-                        </p>
-                      )}
+                      <p className="mt-2 text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                        Every shoot is unique. Get in touch with us to find the perfect package for your requirements.
+                      </p>
                     </div>
 
                     {/* Description */}
