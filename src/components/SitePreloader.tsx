@@ -9,6 +9,7 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
   const [isDone, setIsDone] = useState(false);
   const [isRendered, setIsRendered] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [progress, setProgress] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hasFinishedRef = useRef(false);
 
@@ -22,7 +23,7 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
     }, 450);
   };
 
-  // Lock body scroll while preloader video is active
+  // Lock body scroll while preloader is active
   useEffect(() => {
     if (!isDone && isRendered) {
       document.body.style.overflow = 'hidden';
@@ -36,35 +37,53 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
     };
   }, [isDone, isRendered]);
 
+  // Visual progress ticker for buttery smooth feedback
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return Math.min(prev + 5, 100);
+      });
+    }, 90);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Handle video autoplay, event handlers, and safety timer
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      finishAndOpenSite();
-      return;
-    }
-
     const video = videoRef.current;
     if (video) {
-      // Force muted & playsinline for seamless mobile & desktop autoplay compliance
       video.muted = true;
       video.defaultMuted = true;
+      video.volume = 0;
       video.playsInline = true;
       video.setAttribute('muted', '');
       video.setAttribute('playsinline', '');
       video.setAttribute('webkit-playsinline', 'true');
 
-      const playPromise = video.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.warn('Preload video autoplay was deferred or blocked:', err);
-        });
-      }
+      const attemptPlay = () => {
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setVideoLoaded(true);
+            })
+            .catch((err) => {
+              console.warn('Preload video autoplay was deferred or blocked:', err);
+            });
+        }
+      };
+
+      attemptPlay();
     }
 
-    // Safety fallback timer: video is ~1.71s; allow up to 4s for network fetch + playback
+    // Safety fallback timer: video is ~1.71s; allow up to 3.2s
     const safetyTimer = setTimeout(() => {
       finishAndOpenSite();
-    }, 4000);
+    }, 3200);
 
     return () => clearTimeout(safetyTimer);
   }, []);
@@ -74,6 +93,17 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
     const video = videoRef.current;
     if (video && video.paused) {
       video.play().catch(() => {});
+    }
+  };
+
+  const handleVideoPlaying = () => {
+    setVideoLoaded(true);
+  };
+
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+    if (video && video.currentTime > 0) {
+      setVideoLoaded(true);
     }
   };
 
@@ -106,12 +136,12 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
           role="status"
           aria-label="Snap Shots Intro Animation"
         >
-          {/* Subtle Ambient Red Glow behind video */}
+          {/* Ambient Red Glow behind video */}
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
-            <div className="w-[500px] h-[500px] md:w-[700px] md:h-[700px] rounded-full bg-[radial-gradient(circle,rgba(189,22,22,0.25)_0%,rgba(0,0,0,0)_70%)] blur-3xl animate-pulse" />
+            <div className="w-[500px] h-[500px] md:w-[700px] md:h-[700px] rounded-full bg-[radial-gradient(circle,rgba(189,22,22,0.3)_0%,rgba(0,0,0,0)_70%)] blur-3xl animate-pulse" />
           </div>
 
-          {/* Underlay Brand Logo Placeholder while video decodes/buffers */}
+          {/* Underlay Brand Logo & Progress Bar */}
           <div
             className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300 pointer-events-none ${
               videoLoaded ? 'opacity-0' : 'opacity-100'
@@ -120,11 +150,17 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
             <img
               src="/logo.png"
               alt="Snap Shots"
-              className="w-28 h-auto object-contain drop-shadow-2xl animate-pulse mb-3"
+              className="w-28 sm:w-36 h-auto object-contain drop-shadow-2xl animate-pulse mb-4"
             />
-            <div className="w-24 h-1 bg-zinc-900 rounded-full overflow-hidden">
-              <div className="w-full h-full bg-[#bd1616] animate-pulse" />
+            <div className="w-36 sm:w-48 h-1 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+              <div
+                className="h-full bg-[#bd1616] transition-all duration-100 ease-out"
+                style={{ width: `${progress}%` }}
+              />
             </div>
+            <p className="mt-2 text-[10px] uppercase font-bold tracking-widest text-zinc-300">
+              Your Moments Our Snaps
+            </p>
           </div>
 
           {/* Preload Video */}
@@ -138,12 +174,16 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
               muted
               preload="auto"
               onLoadedData={handleVideoLoadedData}
+              onPlaying={handleVideoPlaying}
+              onTimeUpdate={handleTimeUpdate}
               onEnded={handleVideoEnded}
               onError={handleVideoError}
-              className={`w-full h-full max-h-screen object-contain pointer-events-none transition-opacity duration-200 ${
-                videoLoaded ? 'opacity-100' : 'opacity-90'
+              className={`w-full h-full max-h-screen object-contain pointer-events-none transition-opacity duration-300 ${
+                videoLoaded ? 'opacity-100' : 'opacity-0'
               }`}
-            />
+            >
+              <source src="/videos/preload.mp4" type="video/mp4" />
+            </video>
           </div>
 
           {/* Skip Button in Corner */}
@@ -153,7 +193,7 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
               e.stopPropagation();
               finishAndOpenSite();
             }}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/90 text-zinc-400 hover:text-white text-xs font-semibold border border-zinc-800/80 backdrop-blur-sm transition-all cursor-pointer tracking-wider"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 px-3.5 py-1.5 rounded-full bg-black/70 hover:bg-black/95 text-zinc-300 hover:text-white text-xs font-semibold border border-zinc-800/80 backdrop-blur-sm transition-all cursor-pointer tracking-wider"
           >
             Skip &rarr;
           </button>

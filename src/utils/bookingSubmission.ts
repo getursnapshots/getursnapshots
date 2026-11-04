@@ -5,7 +5,8 @@ import { insertBookingToSupabase } from '../config/supabase';
 
 /**
  * Clean validation function for the booking form.
- * Returns an error string if invalid, or null if valid.
+ * Ensures critical contact info (Name & Phone) is present while allowing
+ * flexible timing/date/location so leads never get blocked.
  */
 export function validateBookingForm(data: BookingFormData): {
   isValid: boolean;
@@ -15,7 +16,7 @@ export function validateBookingForm(data: BookingFormData): {
   const errors: Partial<Record<keyof BookingFormData, string>> = {};
 
   if (!data.name || !data.name.trim()) {
-    errors.name = 'Please enter your name.';
+    errors.name = 'Please enter your full name.';
   }
 
   // Phone validation: must exist and have at least 7 digits
@@ -23,23 +24,7 @@ export function validateBookingForm(data: BookingFormData): {
   if (!data.phone || !data.phone.trim()) {
     errors.phone = 'Please enter your phone number.';
   } else if (cleanPhone.length < 7) {
-    errors.phone = 'Please enter a valid phone number.';
-  }
-
-  if (!data.service || !data.service.trim()) {
-    errors.service = 'Please select a service.';
-  }
-
-  if (!data.date || !data.date.trim()) {
-    errors.date = 'Please select your preferred date.';
-  }
-
-  if (!data.time || !data.time.trim()) {
-    errors.time = 'Please enter your preferred time.';
-  }
-
-  if (!data.location || !data.location.trim()) {
-    errors.location = 'Please enter the shoot location.';
+    errors.phone = 'Please enter a valid phone number (at least 7 digits).';
   }
 
   // Email format check (only if provided)
@@ -58,19 +43,18 @@ export function validateBookingForm(data: BookingFormData): {
 }
 
 /**
- * Builds a formatted WhatsApp link pre-filled with the customer's booking request,
- * including the visitor's selected Country and Package Price.
+ * Builds a formatted WhatsApp link pre-filled with the customer's booking request.
+ * Completely free of fixed numeric prices; specifies Custom Pricing.
  */
 export function buildWhatsAppBookingUrl(
   data: BookingFormData,
-  extra?: { country?: string; price?: string; packageName?: string }
+  extra?: { country?: string; packageName?: string }
 ): string {
   const rawNumber = bookingConfig.whatsappNumber || siteConfig.business.whatsapp;
   // Strip non-digits
   const cleanNumber = rawNumber.replace(/[^0-9]/g, '') || '919014319818';
 
   const selectedCountry = data.country || extra?.country || 'India';
-  const selectedPrice = data.price || extra?.price;
   const packageName = data.packageName || extra?.packageName;
 
   const lines: (string | null)[] = [];
@@ -78,35 +62,30 @@ export function buildWhatsAppBookingUrl(
   if (packageName) {
     lines.push(
       `Hello Snap Shots,`,
-      `I would like to book the ${packageName} package.`,
+      `I would like to book the ${packageName} package (Custom Pricing).`,
       ``,
-      `Country: ${selectedCountry}`
+      `Region: ${selectedCountry}`
     );
-    if (selectedPrice) {
-      lines.push(`Price: ${selectedPrice}`);
-    }
   } else {
     lines.push(
       `Hello Snap Shots,`,
-      `I would like to book a shoot with Snap Shots.`,
+      `I would like to inquire about booking a shoot with Snap Shots (Custom Pricing).`,
       ``,
-      `Country: ${selectedCountry}`
+      `Region: ${selectedCountry}`
     );
-    if (selectedPrice) {
-      lines.push(`Price: ${selectedPrice}`);
-    }
     if (data.service) {
       lines.push(`Service: ${data.service}`);
     }
   }
 
-  // Add any details entered by user
+  // Add details entered by user
   const extraDetails: string[] = [];
   if (data.name && data.name.trim()) extraDetails.push(`*Name:* ${data.name}`);
   if (data.phone && data.phone.trim()) extraDetails.push(`*Phone:* ${data.phone}`);
   if (data.email && data.email.trim()) extraDetails.push(`*Email:* ${data.email}`);
   if (data.date && data.date.trim()) extraDetails.push(`*Date:* ${data.date}`);
   if (data.time && data.time.trim()) extraDetails.push(`*Time:* ${data.time}`);
+  if (data.duration && data.duration.trim()) extraDetails.push(`*Duration:* ${data.duration}`);
   if (data.location && data.location.trim()) extraDetails.push(`*Location:* ${data.location}`);
   if (data.couponCode && data.couponCode.trim()) {
     extraDetails.push(`*Coupon Applied:* ${data.couponCode}${data.discountApplied ? ` (${data.discountApplied})` : ''}`);
@@ -114,7 +93,7 @@ export function buildWhatsAppBookingUrl(
   if (data.requirements && data.requirements.trim()) extraDetails.push(`*Notes:* ${data.requirements}`);
 
   if (extraDetails.length > 0) {
-    lines.push(``, `*Details:*`, ...extraDetails);
+    lines.push(``, `*Shoot Details:*`, ...extraDetails);
   }
 
   const message = lines.filter((line) => line !== null).join('\n');
@@ -127,7 +106,7 @@ export function buildWhatsAppBookingUrl(
  */
 export function buildMailtoUrl(
   data: BookingFormData,
-  extra?: { country?: string; price?: string; packageName?: string }
+  extra?: { country?: string; packageName?: string }
 ): string {
   const recipient = bookingConfig.emailRecipient || 'getursnapshots@gmail.com';
   const serviceName = data.service || 'Shoot Booking';
@@ -150,8 +129,8 @@ export function buildMailtoUrl(
     `SHOOT DETAILS`,
     `--------------------------------------------------`,
     `Service: ${data.service || 'Event Reels'}`,
-    `Package: ${data.packageName || extra?.packageName || 'Custom'}`,
-    `Price: ${data.price || extra?.price || 'Standard'}`,
+    `Package: ${data.packageName || extra?.packageName || 'Custom Plan'}`,
+    `Pricing: Custom Pricing (Quote on inquiry)`,
     `Preferred Date: ${data.date || 'Flexible'}`,
     `Preferred Time: ${data.time || 'Flexible'}`,
     `Duration: ${data.duration || 'Standard'}`,
@@ -179,13 +158,27 @@ export function buildMailtoUrl(
 /**
  * Robust submission handler:
  * 1. Sends directly to backend /api/send-lead (which notifies getursnapshots@gmail.com & persists)
- * 2. Saves to local storage fallback
+ * 2. Saves to Supabase database
+ * 3. Saves to local storage fallback
  */
 export async function submitBookingRequest(
   data: BookingFormData
 ): Promise<{ success: boolean; leadId?: string; recipient?: string; message?: string }> {
   const targetRecipient = bookingConfig.emailRecipient || 'getursnapshots@gmail.com';
   const assignedLeadId = `LEAD-${Date.now()}`;
+
+  // Normalized payload with guaranteed sensible fallbacks
+  const sanitizedPayload: BookingFormData = {
+    ...data,
+    name: data.name?.trim() || 'Anonymous Client',
+    phone: data.phone?.trim() || '',
+    service: data.service || 'Event Reels',
+    date: data.date?.trim() || 'Flexible / To Be Decided',
+    time: data.time?.trim() || 'Flexible',
+    duration: data.duration?.trim() || 'Standard',
+    location: data.location?.trim() || 'Flexible / To Be Decided',
+    price: 'Custom Pricing',
+  };
 
   try {
     // 1. Dispatch to server-side lead ingestion & email dispatcher
@@ -194,7 +187,7 @@ export async function submitBookingRequest(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...data,
+          ...sanitizedPayload,
           leadId: assignedLeadId,
           submittedAt: new Date().toISOString(),
           recipient: targetRecipient,
@@ -203,7 +196,7 @@ export async function submitBookingRequest(
 
       if (resp.ok) {
         const result = await resp.json();
-        console.log(`[LEAD DISPATCH] Lead dispatched to server notifications:`, result);
+        console.log(`[LEAD DISPATCH] Lead dispatched to server:`, result);
       } else {
         console.warn(`[LEAD SERVER STATUS] Server responded with ${resp.status}`);
       }
@@ -215,20 +208,20 @@ export async function submitBookingRequest(
     try {
       insertBookingToSupabase({
         lead_id: assignedLeadId,
-        name: data.name,
-        phone: data.phone,
-        email: data.email || undefined,
-        service: data.service,
-        package: data.packageName || undefined,
-        price: data.price || undefined,
-        event_date: data.date,
-        time: data.time || undefined,
-        duration: data.duration || undefined,
-        location: data.location || undefined,
-        country: data.country || undefined,
-        coupon_code: data.couponCode || undefined,
-        discount_applied: data.discountApplied || undefined,
-        requirements: data.requirements || undefined,
+        name: sanitizedPayload.name,
+        phone: sanitizedPayload.phone,
+        email: sanitizedPayload.email || undefined,
+        service: sanitizedPayload.service,
+        package: sanitizedPayload.packageName || undefined,
+        price: 'Custom Pricing',
+        event_date: sanitizedPayload.date,
+        time: sanitizedPayload.time || undefined,
+        duration: sanitizedPayload.duration || undefined,
+        location: sanitizedPayload.location || undefined,
+        country: sanitizedPayload.country || undefined,
+        coupon_code: sanitizedPayload.couponCode || undefined,
+        discount_applied: sanitizedPayload.discountApplied || undefined,
+        requirements: sanitizedPayload.requirements || undefined,
         source: 'Website Booking Form',
         status: 'pending',
         created_at: new Date().toISOString(),
@@ -245,7 +238,7 @@ export async function submitBookingRequest(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...data,
+            ...sanitizedPayload,
             leadId: assignedLeadId,
             submittedAt: new Date().toISOString(),
             recipient: targetRecipient,
@@ -260,22 +253,22 @@ export async function submitBookingRequest(
     try {
       const existing = JSON.parse(localStorage.getItem('snapshots_user_bookings') || '[]');
       existing.unshift({
-        ...data,
+        ...sanitizedPayload,
         id: assignedLeadId,
         submittedAt: new Date().toISOString(),
         deliveredTo: targetRecipient,
       });
-      localStorage.setItem('snapshots_user_bookings', JSON.stringify(existing.slice(0, 30)));
+      localStorage.setItem('snapshots_user_bookings', JSON.stringify(existing.slice(0, 50)));
     } catch {
       // Non-critical local storage fallback
     }
 
-    // 3. Track lead conversion
+    // 5. Track lead conversion
     trackLeadConversion({
       leadId: assignedLeadId,
-      service: data.service,
-      package: data.packageName,
-      country: data.country,
+      service: sanitizedPayload.service,
+      package: sanitizedPayload.packageName,
+      country: sanitizedPayload.country,
     });
 
     return {

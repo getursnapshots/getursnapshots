@@ -104,7 +104,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
             : matched.shootTime.includes('3 Hours') || matched.shootTime.includes('3 hours')
             ? '2-3 Hours'
             : 'Custom / Flexible',
-          requirements: `Interested in the ${matched.name} (${matched.price}).`,
+          requirements: `Interested in the ${matched.name}.`,
         }));
       }
     }
@@ -125,29 +125,32 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
       setErrorMessage('Please enter your full name.');
       return;
     }
-    if (!formData.phone.trim() || formData.phone.trim().length < 8) {
-      setErrorMessage('Please provide a valid phone number for shoot coordination.');
+    const cleanPhone = (formData.phone || '').replace(/[^0-9]/g, '');
+    if (!formData.phone.trim()) {
+      setErrorMessage('Please enter your phone number.');
+      return;
+    } else if (cleanPhone.length < 7) {
+      setErrorMessage('Please enter a valid phone number (at least 7 digits).');
       return;
     }
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      setErrorMessage('Please enter a valid email address.');
-      return;
-    }
-    if (!formData.date) {
-      setErrorMessage('Please select your preferred shoot date.');
-      return;
+    if (formData.email && formData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        setErrorMessage('Please enter a valid email address.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
     setErrorMessage('');
 
     try {
-      const calculatedPrice = selectedPackage ? getPackagePrice(selectedPackage) : undefined;
       await submitBookingRequest({
         ...formData,
+        date: formData.date?.trim() || 'Flexible / To Be Decided',
         country: countryConfig.whatsappCountryName,
         packageName: selectedPackage || undefined,
-        price: calculatedPrice,
+        price: 'Custom Pricing',
         couponCode: appliedCoupon?.code,
         discountApplied: appliedCoupon ? `${appliedCoupon.discountPercent}% OFF` : undefined,
       });
@@ -309,7 +312,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                     Booking Request Sent Successfully!
                   </h3>
                   <p className="mt-2 text-sm text-zinc-300 max-w-md mx-auto leading-relaxed">
-                    Our shoot director has received your booking details for <strong className="text-white">{formData.service}</strong> on <strong className="text-white">{formData.date}</strong>. A copy of your lead has been dispatched to <strong className="text-[#ffc800]">getursnapshots@gmail.com</strong>.
+                    Our shoot director has received your booking details for <strong className="text-white">{formData.service}</strong> on <strong className="text-white">{formData.date || 'Flexible Date'}</strong>. A copy of your lead has been dispatched to <strong className="text-[#ffc800]">getursnapshots@gmail.com</strong>.
                   </p>
 
                   <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -326,7 +329,6 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                     <a
                       href={buildMailtoUrl(formData, {
                         country: countryConfig.whatsappCountryName,
-                        price: selectedPackage ? getPackagePrice(selectedPackage) : undefined,
                         packageName: selectedPackage,
                       })}
                       className="w-full sm:w-auto px-6 h-11 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-colors border border-zinc-700 hover:border-[#bd1616]"
@@ -422,12 +424,11 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-                        Email <span className="text-[#bd1616]">*</span>
+                        Email <span className="text-zinc-500 font-normal text-[11px]">(Optional)</span>
                       </label>
                       <input
                         type="email"
                         name="email"
-                        required
                         value={formData.email}
                         onChange={handleChange}
                         placeholder="aditi@example.com"
@@ -460,12 +461,11 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-                        Preferred Date <span className="text-[#bd1616]">*</span>
+                        Preferred Date <span className="text-zinc-500 font-normal text-[11px]">(or Flexible)</span>
                       </label>
                       <input
                         type="date"
                         name="date"
-                        required
                         min={new Date().toISOString().split('T')[0]}
                         value={formData.date}
                         onChange={handleChange}
@@ -509,17 +509,17 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
                         className="w-full h-11 px-3 rounded-xl bg-zinc-900 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#bd1616] focus:border-transparent transition-all cursor-pointer"
                         id="booking-select-duration"
                       >
-                        <option value="1 Hour (Quick Shot)" className="bg-zinc-900 text-white">
-                          1 Hour (Quick Shot — {getPackagePrice('quick-shot')})
+                        <option value="1 Hour" className="bg-zinc-900 text-white">
+                          1 Hour (Quick Shot)
                         </option>
-                        <option value="2-3 Hours (Event Reel)" className="bg-zinc-900 text-white">
-                          2-3 Hours (Event Reel — {getPackagePrice('event-reel')})
+                        <option value="2-3 Hours" className="bg-zinc-900 text-white">
+                          2-3 Hours (Event Reel)
                         </option>
-                        <option value="Full Day (6+ Hours)" className="bg-zinc-900 text-white">
-                          Full Day (6+ Hours — {getPackagePrice('full-content')})
+                        <option value="Full Day" className="bg-zinc-900 text-white">
+                          Full Day (Complete Coverage)
                         </option>
-                        <option value="Multi-Day / Wedding Elite" className="bg-zinc-900 text-white">
-                          Multi-Day / Wedding Elite (From {getEliteStartingPrice()})
+                        <option value="Multi-Day / Custom" className="bg-zinc-900 text-white">
+                          Multi-Day / Wedding &amp; Celebrations
                         </option>
                       </select>
                     </div>

@@ -66,7 +66,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     email: '',
     service: initialService || bookingConfig.services[0] || 'Event Reels',
     date: '',
-    time: '',
+    time: 'Flexible',
     duration: '2 Hours',
     location: '',
     requirements: '',
@@ -251,18 +251,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             : pkg.shootTime.includes('3 Hours')
             ? '3 Hours'
             : 'Full Day';
-          const dynamicPrice = getPackagePrice(pkg.id);
           setFormData((prev) => ({
             ...prev,
             duration: durationMapping,
-            requirements: prev.requirements || `Interested in the ${pkg.name} package (${dynamicPrice}).`,
+            requirements: prev.requirements || `Interested in the ${pkg.name} package.`,
           }));
         } else if (initialPackage === 'elite-select' || initialPackage === 'exclusive-tier') {
-          const elitePrice = getEliteStartingPrice();
           setFormData((prev) => ({
             ...prev,
             duration: 'Full Day',
-            requirements: prev.requirements || `Interested in the ${siteConfig.exclusiveTier.name} package (${elitePrice}).`,
+            requirements: prev.requirements || `Interested in the ${siteConfig.exclusiveTier.name} package.`,
           }));
         }
       }
@@ -375,7 +373,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       await submitBookingRequest({
         ...formData,
         country: countryConfig.whatsappCountryName,
-        price: pricingCalculation?.finalPrice || resolvedPackageInfo.price,
+        price: 'Custom Pricing',
         packageName: resolvedPackageInfo.name,
       });
 
@@ -403,7 +401,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const copyEmailSummaryToClipboard = () => {
     const activePkg = resolvedPackageInfo;
-    const finalPrice = pricingCalculation?.finalPrice || activePkg.price;
     const emailBody = `=====================================================
 AUTOMATED BOOKING SUMMARY - SNAP SHOTS STUDIO
 Reference ID: ${bookingReferenceId}
@@ -433,17 +430,16 @@ ${activePkg.deliverables.map((item: string) => `  - ${item}`).join('\n')}
 -----------------------------------------------------
 3. SHOOT LOGISTICS & SCHEDULE
 -----------------------------------------------------
-• Scheduled Date: ${formData.date}
-• Scheduled Time: ${formData.time}
-• Shoot Location: ${formData.location}
+• Scheduled Date: ${formData.date || 'Flexible'}
+• Scheduled Time: ${formData.time || 'Flexible'}
+• Shoot Location: ${formData.location || 'To be decided'}
 • Region / Market: ${countryConfig.whatsappCountryName}
 ${formData.requirements ? `• Special Instructions: "${formData.requirements}"\n` : ''}
 -----------------------------------------------------
-4. INVESTMENT & PRICING BREAKDOWN
+4. INVESTMENT & PRICING
 -----------------------------------------------------
-• Base Package Rate: ${pricingCalculation?.originalPrice || activePkg.price}
-${formData.couponCode ? `• Applied Coupon: ${formData.couponCode} (${formData.discountApplied}) - Saved ${pricingCalculation?.savedAmount || ''}\n` : ''}• Total Estimated Price: ${finalPrice}
-• Currency: ${countryConfig.currency} (${countryConfig.symbol})
+• Rate: Custom Pricing (Tailored Quote on inquiry)
+${formData.couponCode ? `• Applied Coupon: ${formData.couponCode} (${formData.discountApplied})\n` : ''}• Currency / Region: ${countryConfig.currency} (${countryConfig.symbol})
 
 -----------------------------------------------------
 DISPATCH STATUS:
@@ -468,7 +464,6 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
 
     const url = buildWhatsAppBookingUrl(formData, {
       country: countryConfig.whatsappCountryName,
-      price: pricingCalculation?.finalPrice || resolvedPackageInfo.price,
       packageName: `${resolvedPackageInfo.name} (${formData.service} - Ref: ${bookingReferenceId || 'DIRECT'})`,
     });
     openExternalUrl(url);
@@ -768,8 +763,8 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                     </div>
                     <h4 className="text-base sm:text-lg font-black text-white flex items-baseline justify-between flex-wrap gap-1">
                       <span>{resolvedPackageInfo.name}</span>
-                      <span className="text-sm font-extrabold text-[#bd1616]">
-                        {pricingCalculation?.finalPrice || resolvedPackageInfo.price}
+                      <span className="text-xs font-extrabold text-[#ffc800] uppercase tracking-wider">
+                        Custom Pricing
                       </span>
                     </h4>
                     <p className="text-xs text-zinc-400 leading-relaxed">
@@ -850,12 +845,12 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                   </div>
                 )}
 
-                {/* Financial Summary & Pricing Statement */}
+                {/* Pricing Statement */}
                 <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs space-y-2">
                   <div className="flex justify-between items-center text-zinc-400">
-                    <span>Package Base Rate:</span>
-                    <span className="text-zinc-200 font-mono font-medium">
-                      {pricingCalculation?.originalPrice || resolvedPackageInfo.price}
+                    <span>Pricing Policy:</span>
+                    <span className="text-white font-bold">
+                      Custom Pricing (Tailored Quote)
                     </span>
                   </div>
 
@@ -866,16 +861,14 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                         Coupon Applied ({formData.couponCode}):
                       </span>
                       <span className="font-mono font-bold">
-                        -{pricingCalculation?.savedAmount || formData.discountApplied || 'Discount'}
+                        {formData.discountApplied || 'Special Discount Activated'}
                       </span>
                     </div>
                   )}
 
-                  <div className="border-t border-zinc-800 pt-2.5 flex justify-between items-center text-sm font-extrabold">
-                    <span className="text-white uppercase tracking-wider">Estimated Total ({countryConfig.currency}):</span>
-                    <span className="text-base sm:text-lg text-[#bd1616] font-mono">
-                      {pricingCalculation?.finalPrice || resolvedPackageInfo.price}
-                    </span>
+                  <div className="border-t border-zinc-800 pt-2 flex justify-between items-center text-xs">
+                    <span className="text-zinc-400">Shoot Region:</span>
+                    <span className="text-zinc-200 font-semibold">{countryConfig.whatsappCountryName}</span>
                   </div>
                 </div>
 
@@ -987,7 +980,7 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
               </div>
             )}
 
-            {/* Selected Package and Price Display */}
+            {/* Selected Package Header */}
             {selectedPackageInfo && (
               <div
                 className="mt-3.5 sm:mt-4 p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-inner"
@@ -1033,25 +1026,11 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
 
                   <div className="text-right">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                      Price ({countryConfig.currency}):
+                      Pricing:
                     </span>
-                    {pricingCalculation?.hasDiscount ? (
-                      <div className="flex items-baseline justify-end gap-1.5 flex-wrap">
-                        <span className="text-xs line-through text-zinc-500 font-medium">
-                          {pricingCalculation.originalPrice}
-                        </span>
-                        <span className="text-sm sm:text-base font-extrabold text-[#bd1616]">
-                          {pricingCalculation.finalPrice}
-                        </span>
-                        <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/80 border border-emerald-800/80 px-1.5 py-0.5 rounded-md">
-                          {pricingCalculation.percent}% OFF
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm sm:text-base font-extrabold text-[#bd1616]">
-                        {selectedPackageInfo.price}
-                      </span>
-                    )}
+                    <span className="text-xs sm:text-sm font-extrabold text-[#ffc800]">
+                      Custom Pricing
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1244,26 +1223,27 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                       htmlFor="modal-time"
                       className="block text-xs sm:text-sm font-semibold text-zinc-200 mb-1 sm:mb-1.5"
                     >
-                      Preferred Time <span className="text-red-400">*</span>
+                      Preferred Time
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
                         <Clock className="w-4 h-4" />
                       </div>
-                      <input
-                        type="time"
+                      <select
                         id="modal-time"
                         name="time"
-                        value={formData.time}
+                        value={formData.time || 'Flexible'}
                         onChange={handleChange}
-                        className={`w-full h-11 sm:h-11 md:h-12 pl-9 pr-3 rounded-xl bg-zinc-950 border ${
-                          errors.time ? 'border-red-500 ring-1 ring-red-500' : 'border-zinc-800'
-                        } text-base sm:text-sm text-white focus:outline-none focus:border-[#bd1616] focus:ring-1 focus:ring-[#bd1616] transition-colors [color-scheme:dark]`}
-                      />
+                        className="w-full h-11 sm:h-11 md:h-12 pl-9 pr-3 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-[#bd1616] focus:ring-1 focus:ring-[#bd1616] transition-colors"
+                      >
+                        <option value="Flexible">Flexible / Anytime</option>
+                        <option value="Morning (8 AM - 12 PM)">Morning (8 AM - 12 PM)</option>
+                        <option value="Afternoon (12 PM - 4 PM)">Afternoon (12 PM - 4 PM)</option>
+                        <option value="Golden Hour / Evening (4 PM - 8 PM)">Golden Hour / Evening (4 PM - 8 PM)</option>
+                        <option value="Night / Late Event (8 PM Onwards)">Night / Late Event (8 PM Onwards)</option>
+                        <option value="Full Day Coverage">Full Day Coverage</option>
+                      </select>
                     </div>
-                    {errors.time && (
-                      <p className="text-[11px] sm:text-xs text-red-400 font-medium mt-1">{errors.time}</p>
-                    )}
                   </div>
                 </div>
 
@@ -1423,7 +1403,7 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                     htmlFor="modal-location"
                     className="block text-xs sm:text-sm font-semibold text-zinc-200 mb-1 sm:mb-1.5"
                   >
-                    Shoot Location <span className="text-red-400">*</span>
+                    Shoot Location
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
@@ -1435,10 +1415,8 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                       name="location"
                       value={formData.location}
                       onChange={handleChange}
-                      placeholder="Enter shoot location"
-                      className={`w-full h-11 sm:h-11 md:h-12 pl-9 pr-3 rounded-xl bg-zinc-950 border ${
-                        errors.location ? 'border-red-500 ring-1 ring-red-500' : 'border-zinc-800'
-                      } text-base sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#bd1616] focus:ring-1 focus:ring-[#bd1616] transition-colors`}
+                      placeholder="e.g. Hyderabad / Warangal / Dallas / Venue (or Flexible)"
+                      className="w-full h-11 sm:h-11 md:h-12 pl-9 pr-3 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#bd1616] focus:ring-1 focus:ring-[#bd1616] transition-colors"
                     />
                   </div>
                   {errors.location && (
@@ -1554,12 +1532,7 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                           </span>
                         </div>
                         <p className="text-[11px] text-zinc-300">
-                          {appliedCoupon.description}
-                          {pricingCalculation?.savedAmount && (
-                            <span className="text-emerald-400 font-bold ml-1">
-                              • Saved {pricingCalculation.savedAmount}
-                            </span>
-                          )}
+                          {appliedCoupon.description} • Special discount applied to your quote
                         </p>
                       </div>
                     </div>

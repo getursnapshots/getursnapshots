@@ -52,8 +52,8 @@ export const PRICING_CONFIG: Record<SupportedCountryCode, CountryPricingConfig> 
       quickShotOriginal: 1999,  // Hourly Plan price: ₹1,999
       eventReel: 4999,          // Half Day Plan price: ₹4,999
       eventReelOriginal: 4999,  // Half Day Plan price: ₹4,999
-      fullContent: 1249,        // Add On's price: ₹1,249
-      fullContentOriginal: 1249,// Add On's price: ₹1,249
+      fullContent: 1249,        // Full Event Plan price: ₹1,249
+      fullContentOriginal: 1249,// Full Event Plan price: ₹1,249
     },
   },
 
@@ -72,8 +72,8 @@ export const PRICING_CONFIG: Record<SupportedCountryCode, CountryPricingConfig> 
       quickShotOriginal: 149, // Hourly Plan cut price: $149
       eventReel: 299,         // Half Day Plan offer price: $299 (changed from 399)
       eventReelOriginal: 399, // Half Day Plan cut price: $399
-      fullContent: 79,        // Add On's offer price: $79 (changed from 99)
-      fullContentOriginal: 99,// Add On's original cut price: $99 (changed from 125)
+      fullContent: 79,        // Full Event Plan offer price: $79
+      fullContentOriginal: 99,// Full Event Plan original cut price: $99
     },
   },
 };
