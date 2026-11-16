@@ -25,7 +25,6 @@ import {
   ShieldCheck,
   Send,
   ExternalLink,
-  Receipt,
 } from 'lucide-react';
 import { siteConfig, bookingConfig } from '../config/siteConfig';
 import { BookingFormData } from '../types';
@@ -34,11 +33,9 @@ import {
   validateBookingForm,
   buildWhatsAppBookingUrl,
   submitBookingRequest,
-  buildMailtoUrl,
 } from '../utils/bookingSubmission';
 import {
   validateCoupon,
-  calculateDiscountedPrice,
   CouponResult,
 } from '../utils/couponHelper';
 import { openExternalUrl } from '../utils/navigationHelper';
@@ -92,6 +89,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const resolvedPackageInfo = useMemo(() => {
     // 1. If explicit package specified
     if (initialPackage) {
+      if (initialPackage === 'wedding-select') {
+        return {
+          id: 'wedding-select',
+          name: 'Wedding & Select Package',
+          price: 'Custom Quote',
+          originalPrice: undefined,
+          shootTime: 'Full Event / Multi-Day Coverage',
+          deliverables: [
+            'Lead Storyteller + Assistant Rig',
+            'Same-Night Highlights Reel',
+            'Full 4K Uncompressed Raw Vault',
+            'iPhone 16 Pro Max + Cinema Hybrid',
+          ],
+          features: ['Multi-Angle Coverage', 'Same-Night Express Teaser'],
+          tagline: 'Comprehensive multi-angle coverage for pre-wedding, sangeet, haldi, wedding ceremony, and grand reception.',
+          badge: 'Wedding & Select',
+        };
+      }
       if (initialPackage === 'elite-select' || initialPackage === 'exclusive-tier') {
         return {
           id: 'exclusive-tier',
@@ -178,29 +193,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [initialPackage, formData.duration, getPackagePrice, getEliteStartingPrice]);
 
-  // Backward compatibility alias for form top header
-  const selectedPackageInfo = initialPackage ? resolvedPackageInfo : null;
-
-  // Dynamic pricing calculation when coupon is applied
-  const pricingCalculation = useMemo(() => {
-    const basePrice = resolvedPackageInfo.price;
-    if (!basePrice) return null;
-    if (!appliedCoupon || appliedCoupon.discountPercent <= 0) {
-      return {
-        hasDiscount: false,
-        finalPrice: basePrice,
-        originalPrice: resolvedPackageInfo.originalPrice || basePrice,
-      };
-    }
-    const res = calculateDiscountedPrice(basePrice, appliedCoupon.discountPercent);
-    return {
-      hasDiscount: true,
-      originalPrice: resolvedPackageInfo.originalPrice || basePrice,
-      finalPrice: res.discountedPrice || basePrice,
-      savedAmount: res.savedAmount,
-      percent: appliedCoupon.discountPercent,
-    };
-  }, [resolvedPackageInfo, appliedCoupon]);
+  // Only show Selected Package banner if user picked an explicit package plan
+  const selectedPackageInfo =
+    initialPackage && initialPackage !== 'event-reel' ? resolvedPackageInfo : null;
 
   const handleApplyCoupon = (codeToApply?: string) => {
     const code = codeToApply !== undefined ? codeToApply : couponInput;
@@ -246,15 +241,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       if (initialPackage) {
         const pkg = siteConfig.packages.find((p) => p.id === initialPackage);
         if (pkg) {
-          const durationMapping = pkg.shootTime.includes('1 Hour')
+          const shootTimeLower = pkg.shootTime.toLowerCase();
+          const durationMapping = shootTimeLower.includes('1 hour')
             ? '1 Hour'
-            : pkg.shootTime.includes('3 Hours')
+            : shootTimeLower.includes('3 hours')
             ? '3 Hours'
             : 'Full Day';
           setFormData((prev) => ({
             ...prev,
             duration: durationMapping,
             requirements: prev.requirements || `Interested in the ${pkg.name} package.`,
+          }));
+        } else if (initialPackage === 'wedding-select') {
+          setFormData((prev) => ({
+            ...prev,
+            service: initialService || 'Wedding Reels',
+            duration: 'Full Day',
+            requirements:
+              prev.requirements ||
+              'Interested in the Wedding & Select Package with multi-angle cinematic coverage.',
           }));
         } else if (initialPackage === 'elite-select' || initialPackage === 'exclusive-tier') {
           setFormData((prev) => ({
@@ -662,7 +667,7 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                     <span className="w-2.5 h-2.5 rounded-full bg-[#ffc800]" />
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   </div>
-                  <span className="text-[11px] font-mono text-zinc-400 hidden sm:inline ml-2 flex items-center gap-1.5">
+                  <span className="text-[11px] font-mono text-zinc-400 hidden sm:inline-flex items-center gap-1.5 ml-2">
                     <Mail className="w-3.5 h-3.5 text-zinc-400" />
                     <span>dispatch.snapshots.photos/inbox</span>
                   </span>
@@ -805,7 +810,7 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-zinc-500 block">Shoot Date</span>
-                      <span className="text-white font-semibold">{formData.date}</span>
+                      <span className="text-white font-semibold">{formData.date || 'Flexible / To Be Decided'}</span>
                     </div>
                   </div>
 
@@ -825,8 +830,8 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                     </div>
                     <div className="truncate">
                       <span className="text-[10px] uppercase font-bold text-zinc-500 block">Location</span>
-                      <span className="text-white font-semibold truncate block" title={formData.location}>
-                        {formData.location}
+                      <span className="text-white font-semibold truncate block" title={formData.location || 'To be decided'}>
+                        {formData.location || 'To be decided'}
                       </span>
                     </div>
                   </div>
@@ -1183,7 +1188,7 @@ Tel: +91 90143 19818 | getursnapshots@gmail.com
                         htmlFor="modal-date"
                         className="block text-xs sm:text-sm font-semibold text-zinc-200"
                       >
-                        Preferred Date <span className="text-red-400">*</span>
+                        Preferred Date <span className="text-zinc-500 font-normal text-xs">(or Flexible)</span>
                       </label>
                       <button
                         type="button"

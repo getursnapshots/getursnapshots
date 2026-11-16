@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowUpRight, MessageSquare, UserPlus } from 'lucide-react';
+import { X, ArrowUpRight, UserPlus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
 import logoPng from '../assets/logo.png';
@@ -111,12 +111,10 @@ export const Header: React.FC<HeaderProps> = ({ onBookClick }) => {
                 aria-label="Snap Shots Home"
               >
                 <img
-                  src={logoPng || '/assets/logo.png'}
+                  src={logoPng || '/logo.png'}
                   onError={(e) => {
                     const el = e.currentTarget;
-                    if (!el.src.endsWith('/assets/logo.png')) {
-                      el.src = '/assets/logo.png';
-                    } else if (!el.src.endsWith('/logo.png')) {
+                    if (!el.src.endsWith('/logo.png')) {
                       el.src = '/logo.png';
                     }
                   }}
@@ -219,12 +217,10 @@ export const Header: React.FC<HeaderProps> = ({ onBookClick }) => {
                 className="cursor-pointer"
               >
                 <img
-                  src={logoPng || '/assets/logo.png'}
+                  src={logoPng || '/logo.png'}
                   onError={(e) => {
                     const el = e.currentTarget;
-                    if (!el.src.endsWith('/assets/logo.png')) {
-                      el.src = '/assets/logo.png';
-                    } else if (!el.src.endsWith('/logo.png')) {
+                    if (!el.src.endsWith('/logo.png')) {
                       el.src = '/logo.png';
                     }
                   }}
@@ -293,7 +289,7 @@ export const Header: React.FC<HeaderProps> = ({ onBookClick }) => {
               <button
                 type="button"
                 onClick={handleBecomeCreator}
-                className="w-full h-11 sm:h-12 rounded-full bg-zinc-900/90 hover:bg-zinc-800 active:bg-zinc-850 border border-zinc-700/80 hover:border-zinc-600 text-zinc-200 hover:text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm active:scale-98 transition-all cursor-pointer"
+                className="w-full h-11 sm:h-12 rounded-full bg-zinc-900/90 hover:bg-zinc-800 active:bg-zinc-800 border border-zinc-700/80 hover:border-zinc-600 text-zinc-200 hover:text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm active:scale-98 transition-all cursor-pointer"
                 id="menu-become-creator-btn"
               >
                 <UserPlus className="w-3.5 h-3.5 text-zinc-300" />

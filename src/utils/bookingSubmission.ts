@@ -222,7 +222,7 @@ export async function submitBookingRequest(
         coupon_code: sanitizedPayload.couponCode || undefined,
         discount_applied: sanitizedPayload.discountApplied || undefined,
         requirements: sanitizedPayload.requirements || undefined,
-        source: 'Website Booking Form',
+        source: sanitizedPayload.source || 'Website Booking Form',
         status: 'pending',
         created_at: new Date().toISOString(),
         submitted_at: new Date().toISOString(),

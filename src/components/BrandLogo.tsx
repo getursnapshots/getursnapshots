@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Camera, RotateCcw, Check } from 'lucide-react';
+import { Camera, RotateCcw, Check, AlertCircle } from 'lucide-react';
 import { useLogo } from '../context/LogoContext';
 import logoPng from '../assets/logo.png';
 
@@ -21,9 +21,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const { customLogoUrl, hasCustomLogo, saveCustomLogo, removeCustomLogo } = useLogo();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [justUpdated, setJustUpdated] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const isHeader = variant === 'header';
-  const defaultLogo = logoPng || '/assets/logo.png';
+  const defaultLogo = logoPng || '/logo.png';
   const displayLogoUrl = customLogoUrl || defaultLogo;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,10 +32,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file (PNG, JPG, SVG, WebP).');
+      setUploadError('Please select an image file (PNG, JPG, SVG, WebP).');
+      setTimeout(() => setUploadError(null), 3500);
+      e.target.value = '';
       return;
     }
 
+    setUploadError(null);
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
@@ -77,9 +81,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           src={displayLogoUrl}
           onError={(e) => {
             const el = e.currentTarget;
-            if (!el.src.endsWith('/assets/logo.png')) {
-              el.src = '/assets/logo.png';
-            } else if (!el.src.endsWith('/logo.png')) {
+            if (!el.src.endsWith('/logo.png')) {
               el.src = '/logo.png';
             }
           }}
@@ -139,6 +141,14 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         <div className="absolute -bottom-8 left-0 z-50 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/95 border border-emerald-600/80 text-emerald-300 text-[10px] font-bold shadow-xl animate-in fade-in duration-200 whitespace-nowrap">
           <Check className="w-3 h-3 text-emerald-400" />
           <span>Image updated!</span>
+        </div>
+      )}
+
+      {/* Error indicator toast */}
+      {uploadError && (
+        <div className="absolute -bottom-8 left-0 z-50 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-950/95 border border-red-600/80 text-red-200 text-[10px] font-bold shadow-xl animate-in fade-in duration-200 whitespace-nowrap">
+          <AlertCircle className="w-3 h-3 text-red-400" />
+          <span>{uploadError}</span>
         </div>
       )}
     </div>

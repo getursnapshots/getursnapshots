@@ -331,7 +331,7 @@ export const AdminLoginModal: React.FC = () => {
               <button
                 type="button"
                 onClick={logout}
-                className="px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="Sign out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -500,7 +500,7 @@ export const AdminLoginModal: React.FC = () => {
                     type="button"
                     onClick={fetchLeads}
                     disabled={isLoadingLeads}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                     title="Refresh bookings list from Supabase & local storage"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLeads ? 'animate-spin text-[#bd1616]' : ''}`} />

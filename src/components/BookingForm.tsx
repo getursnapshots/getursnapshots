@@ -28,7 +28,7 @@ interface BookingFormProps {
 }
 
 export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selectedPackage }) => {
-  const { countryConfig, getPackagePrice, getEliteStartingPrice } = useCountry();
+  const { countryConfig } = useCountry();
 
   const [formData, setFormData] = useState<BookingFormData>({
     name: '',
@@ -158,7 +158,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ selectedService, selec
       setIsSubmitted(true);
     } catch (err: any) {
       console.error('Submission error:', err);
-      setIsSubmitted(true);
+      setErrorMessage('Could not submit booking request right now. Please try again or reach us via WhatsApp.');
     } finally {
       setIsSubmitting(false);
     }

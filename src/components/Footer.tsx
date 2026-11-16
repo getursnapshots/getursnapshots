@@ -2,12 +2,9 @@ import React from 'react';
 import {
   Instagram,
   Facebook,
-  Phone,
   Mail,
   MapPin,
   ArrowUp,
-  MessageSquare,
-  Clock,
   Sparkles,
   ArrowUpRight,
   CheckCircle2,
@@ -155,15 +152,15 @@ export const Footer: React.FC = () => {
             {/* Value Highlights */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2">
               <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs">
-                <div className="font-bold text-white text-sm text-[#ffc800]">2–4 Hours</div>
+                <div className="font-bold text-sm text-[#ffc800]">2–4 Hours</div>
                 <div className="text-zinc-400 text-[11px] mt-0.5">Express delivery</div>
               </div>
               <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs">
-                <div className="font-bold text-white text-sm text-[#ffc800]">4K 60fps</div>
+                <div className="font-bold text-sm text-[#ffc800]">4K 60fps</div>
                 <div className="text-zinc-400 text-[11px] mt-0.5">Full RAW clips access</div>
               </div>
               <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs col-span-2 sm:col-span-1">
-                <div className="font-bold text-white text-sm text-[#ffc800]">4.5 ★ Rating</div>
+                <div className="font-bold text-sm text-[#ffc800]">4.5 ★ Rating</div>
                 <div className="text-zinc-400 text-[11px] mt-0.5">Top client satisfaction</div>
               </div>
             </div>
@@ -171,7 +168,7 @@ export const Footer: React.FC = () => {
 
           {/* NAVIGATION (Right Column - Side by Side) */}
           <div className="lg:col-span-5 flex flex-col justify-start">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 pb-2 border-b border-zinc-850">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4 pb-2 border-b border-zinc-800">
               Quick Navigation
             </h4>
 
@@ -197,7 +194,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 py-10 border-b border-zinc-800/80">
           {/* SPECIALTIES (Left Column) */}
           <div className="space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 pb-2 border-b border-zinc-850 flex items-center justify-between">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 pb-2 border-b border-zinc-800 flex items-center justify-between">
               <span>Our Specialties</span>
               <span className="text-[#bd1616] text-[10px] font-bold">4K Video &amp; Stills</span>
             </h4>
@@ -214,7 +211,7 @@ export const Footer: React.FC = () => {
                     navigate('/services');
                     window.scrollTo({ top: 0, behavior: 'instant' });
                   }}
-                  className="p-3 rounded-2xl bg-zinc-950/80 border border-zinc-850 hover:border-[#bd1616]/60 transition-all cursor-pointer group flex items-start gap-3"
+                  className="p-3 rounded-2xl bg-zinc-950/80 border border-zinc-800 hover:border-[#bd1616]/60 transition-all cursor-pointer group flex items-start gap-3"
                 >
                   <CheckCircle2 className="w-4 h-4 text-[#bd1616] shrink-0 mt-0.5" />
                   <div>
@@ -231,7 +228,7 @@ export const Footer: React.FC = () => {
           {/* CONTACT (Right Column - Side by Side) */}
           <div className="space-y-4 flex flex-col justify-between">
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 pb-2 border-b border-zinc-850 flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 pb-2 border-b border-zinc-800 flex items-center justify-between">
                 <span>Contact &amp; Bookings</span>
                 <span className="text-emerald-400 text-[10px] font-bold">Live Support</span>
               </h4>
@@ -248,7 +245,7 @@ export const Footer: React.FC = () => {
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-850 hover:border-emerald-500/60 transition-all flex items-center justify-between group"
+                  className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-emerald-500/60 transition-all flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-emerald-500/10 text-[#25D366]">
@@ -269,7 +266,7 @@ export const Footer: React.FC = () => {
                 {/* Email */}
                 <a
                   href={`mailto:${siteConfig.business.email}`}
-                  className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-850 hover:border-[#bd1616]/60 transition-all flex items-center gap-3 group"
+                  className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-[#bd1616]/60 transition-all flex items-center gap-3 group"
                 >
                   <div className="p-2 rounded-xl bg-[#bd1616]/10 text-[#bd1616]">
                     <Mail className="w-4 h-4" />
@@ -283,7 +280,7 @@ export const Footer: React.FC = () => {
                 </a>
 
                 {/* Location */}
-                <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-850 flex items-center gap-3">
+                <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-[#bd1616]/10 text-[#bd1616]">
                     <MapPin className="w-4 h-4" />
                   </div>
@@ -299,6 +296,7 @@ export const Footer: React.FC = () => {
             <div className="pt-2">
               <button
                 type="button"
+                data-no-booking-modal="true"
                 onClick={() => {
                   navigate('/contact');
                   window.scrollTo({ top: 0, behavior: 'instant' });

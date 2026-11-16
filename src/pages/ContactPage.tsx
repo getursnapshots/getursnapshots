@@ -3,17 +3,16 @@ import {
   Phone,
   Mail,
   MapPin,
-  MessageSquare,
   Clock,
   Send,
   CheckCircle2,
+  AlertCircle,
   Sparkles,
   Instagram,
   Facebook,
-  ArrowUpRight,
 } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
-import { submitBookingRequest, buildMailtoUrl } from '../utils/bookingSubmission';
+import { submitBookingRequest } from '../utils/bookingSubmission';
 import { WhatsAppIcon } from '../components/icons/WhatsAppIcon';
 import { openExternalUrl } from '../utils/navigationHelper';
 
@@ -30,14 +29,38 @@ export const ContactPage: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errorMessage) setErrorMessage('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.name.trim()) {
+      setErrorMessage('Please enter your full name.');
+      return;
+    }
+    const cleanPhone = (formData.phone || '').replace(/[^0-9]/g, '');
+    if (!formData.phone.trim()) {
+      setErrorMessage('Please enter your phone number.');
+      return;
+    } else if (cleanPhone.length < 7) {
+      setErrorMessage('Please enter a valid phone number (at least 7 digits).');
+      return;
+    }
+    if (formData.email && formData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        setErrorMessage('Please enter a valid email address.');
+        return;
+      }
+    }
+
+    setErrorMessage('');
     setIsSubmitting(true);
 
     try {
@@ -51,11 +74,12 @@ export const ContactPage: React.FC = () => {
         duration: 'Standard',
         location: formData.location,
         requirements: formData.message,
+        source: 'Contact Page Form',
       });
       setSubmitted(true);
     } catch (err) {
       console.error('Contact submit error:', err);
-      setSubmitted(true);
+      setErrorMessage('Unable to send your inquiry right now. Please try again or reach us directly on WhatsApp.');
     } finally {
       setIsSubmitting(false);
     }
@@ -284,6 +308,16 @@ export const ContactPage: React.FC = () => {
                       Fill out this quick form and we&apos;ll get back to you with custom availability and pricing.
                     </p>
                   </div>
+
+                  {errorMessage && (
+                    <div
+                      className="p-3.5 rounded-xl bg-red-950/60 border border-red-800/80 text-red-200 text-xs flex items-center gap-2"
+                      role="alert"
+                    >
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
 
                   {/* Name */}
                   <div>

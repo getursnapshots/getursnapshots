@@ -86,4 +86,5 @@ export interface BookingFormData {
   packageName?: string;
   couponCode?: string;
   discountApplied?: string;
+  source?: string;
 }

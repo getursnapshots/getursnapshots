@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -14,7 +14,6 @@ import { LogoProvider } from './context/LogoContext';
 import { CountryProvider } from './context/CountryContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { SEOHead } from './components/SEOHead';
-import { PackageItem } from './types';
 import { trackBookShootClick } from './services/analyticsService';
 
 // Code-split non-critical routes and heavy modals to slash initial JS execution & bundle size
@@ -42,8 +41,10 @@ function MainAppLayout() {
   const [selectedPackage, setSelectedPackage] = useState<string>('event-reel');
   const [selectedCoupon, setSelectedCoupon] = useState<string>('');
   const [isBookingModalOpen, setIsBookingModalOpen] = useState<boolean>(false);
+  const lastExplicitTriggerRef = useRef<number>(0);
 
   const openBookingModal = (service?: string, pkgId?: string, coupon?: string, triggerLocation = 'navigation') => {
+    lastExplicitTriggerRef.current = Date.now();
     trackBookShootClick({
       location: triggerLocation,
       service,
@@ -63,19 +64,32 @@ function MainAppLayout() {
     openBookingModal(serviceTitle, undefined, undefined, 'services_card');
   };
 
-  // Universal delegate listener to ensure any "BOOK A SHOOT" button triggers the modal
+  // Universal delegate listener to ensure any un-wired "BOOK A SHOOT" button triggers the modal
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
+      // Skip if a React onClick handler already triggered openBookingModal in this event tick
+      if (Date.now() - lastExplicitTriggerRef.current < 150) {
+        return;
+      }
+
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
       const clickable = target.closest('button, a');
       if (!clickable) return;
 
-      if (clickable.closest('#booking-modal-form-content') || clickable.closest('#booking-modal-success')) {
+      if (clickable.getAttribute('data-no-booking-modal') === 'true') {
         return;
       }
-      if (clickable.id === 'booking-submit-btn') {
+
+      if (
+        clickable.closest('#booking-modal-form-content') ||
+        clickable.closest('#booking-modal-success') ||
+        clickable.closest('[id^="booking-modal-success"]')
+      ) {
+        return;
+      }
+      if (clickable.id === 'booking-submit-btn' || clickable.id === 'booking-modal-submit-btn') {
         return;
       }
 
