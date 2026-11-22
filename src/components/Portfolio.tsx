@@ -4,20 +4,12 @@ import {
   ChevronRight,
   Play,
   Film,
-  Upload,
-  RotateCcw,
-  Save,
-  Check,
-  CheckCircle2,
-  Loader2,
-  AlertTriangle,
 } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { ReelWorkItem } from '../types';
 import { isAiStudioEnvironment } from '../utils/aiStudioEnv';
-import { UploadVideoModal } from './UploadVideoModal';
 import { VideoLightbox } from './VideoLightbox';
-import { subscribeToSlides, saveSlideToFirestore } from '../config/firebase';
+import { subscribeToSlides } from '../config/firebase';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
 
@@ -279,13 +271,8 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
-  const [isMuted, setIsMuted] = useState<boolean>(true);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
+  const isMuted = true;
   const centerVideoRef = useRef<HTMLVideoElement | null>(null);
-  const directFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Open 4K video lightbox popup with sound on all devices
   const handleOpenLightbox = (reel: ReelWorkItem) => {
@@ -296,9 +283,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     setSelectedLightboxReel(reel);
     onSelectReel?.(reel);
   };
-
-  // Exact target slide locked when user triggers upload
-  const targetSlideRef = useRef<number>(0);
 
   // Check if running in AI Studio development/workspace mode or logged in as Admin
   const { isAdmin } = useAdminAuth();
@@ -462,48 +446,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     setIsPlaying(true);
   }, [totalSlides]);
 
-  const toggleCenterPlay = () => {
-    setIsPlaying((prev) => !prev);
-  };
-
-  // Synchronous audio toggle ensuring immediate sound playback on mobile & touch devices
-  const toggleSound = (e?: React.MouseEvent | React.TouchEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    const nextMuted = !isMuted;
-    setIsMuted(nextMuted);
-
-    // 1. Direct synchronous audio unmute on active video ref (within trusted user gesture)
-    const video = centerVideoRef.current;
-    if (video) {
-      video.muted = nextMuted;
-      video.defaultMuted = nextMuted;
-      if (!nextMuted) {
-        video.volume = 1.0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn('Audio play notice:', err);
-          });
-        }
-      }
-    }
-
-    // 2. DOM fallback targeting active video in the center slide
-    try {
-      const activeVideo = document.querySelector<HTMLVideoElement>('#work div.z-30 video');
-      if (activeVideo && activeVideo !== video) {
-        activeVideo.muted = nextMuted;
-        activeVideo.defaultMuted = nextMuted;
-        if (!nextMuted) {
-          activeVideo.volume = 1.0;
-          activeVideo.play().catch(() => {});
-        }
-      }
-    } catch {}
-  };
-
   // Tap on active center video: pop up and play whole video with sound in all devices
   const handleCenterSlideClick = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
@@ -511,334 +453,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     if (currentReel) {
       handleOpenLightbox(currentReel);
     }
-  };
-
-  /**
-   * Upload video file to server permanently and update slide
-   */
-  const uploadVideoToServer = async (
-    targetIndex: number,
-    file: File,
-    posterDataUrl?: string
-  ) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('slideIndex', String(targetIndex));
-      formData.append('video', file);
-      if (posterDataUrl) {
-        formData.append('posterDataUrl', posterDataUrl);
-      }
-
-      const res = await fetch('/api/upload-video-file', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error(`Upload failed with status ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data.success && data.videoUrl) {
-        // Permanent server-hosted URL
-        const permanentVideoUrl = data.videoUrl;
-        const permanentPosterUrl = data.posterUrl || posterDataUrl;
-
-        setReplacedBySlide((prev) => {
-          const updated = {
-            ...prev,
-            [targetIndex]: {
-              videoUrl: permanentVideoUrl,
-              posterUrl: permanentPosterUrl,
-            },
-          };
-          try {
-            localStorage.setItem(
-              'snapshots_slide_replacements_strict_v5',
-              JSON.stringify(updated)
-            );
-          } catch {}
-          return updated;
-        });
-
-        // Also synchronize to local slide persistence
-        saveSlideToFirestore(targetIndex, permanentVideoUrl, permanentPosterUrl).catch((e) =>
-          console.warn('Slide sync notice:', e)
-        );
-
-        setHasUnsavedChanges(false);
-        setSaveSuccessMessage(`Slide #${targetIndex + 1} video uploaded & saved permanently for live site!`);
-        setTimeout(() => setSaveSuccessMessage(null), 4000);
-        return;
-      }
-    } catch (err) {
-      console.error('Multipart upload error, trying base64 fallback:', err);
-      // Fallback: convert file to base64 and send via /api/upload-video
-      try {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64 = reader.result as string;
-          const fallbackRes = await fetch('/api/upload-video', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              slideIndex: targetIndex,
-              videoBase64: base64,
-              posterBase64: posterDataUrl,
-            }),
-          });
-          if (fallbackRes.ok) {
-            const fbData = await fallbackRes.json();
-            if (fbData.success && fbData.videoUrl) {
-              setReplacedBySlide((prev) => {
-                const updated = {
-                  ...prev,
-                  [targetIndex]: {
-                    videoUrl: fbData.videoUrl,
-                    posterUrl: fbData.posterUrl || posterDataUrl,
-                  },
-                };
-                try {
-                  localStorage.setItem(
-                    'snapshots_slide_replacements_strict_v5',
-                    JSON.stringify(updated)
-                  );
-                } catch {}
-                return updated;
-              });
-              setHasUnsavedChanges(false);
-              setSaveSuccessMessage(`Slide #${targetIndex + 1} saved successfully!`);
-              setTimeout(() => setSaveSuccessMessage(null), 4000);
-            }
-          }
-        };
-        reader.readAsDataURL(file);
-      } catch (fbErr) {
-        console.error('Fallback upload failed:', fbErr);
-      }
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  // Strictly apply video replacement to ONE single slide index only
-  const applySlideReplacement = (
-    targetIndex: number,
-    newVideoUrl: string,
-    newPosterUrl?: string,
-    file?: File
-  ) => {
-    // 1. Immediately update local state so user sees instantaneous responsive feedback
-    setReplacedBySlide((prev) => {
-      const updated = {
-        ...prev,
-        [targetIndex]: {
-          videoUrl: newVideoUrl,
-          posterUrl: newPosterUrl,
-        },
-      };
-
-      try {
-        localStorage.setItem(
-          'snapshots_slide_replacements_strict_v5',
-          JSON.stringify(updated)
-        );
-      } catch {}
-
-      return updated;
-    });
-
-    // Lock to this slide and play immediately
-    setActiveIndex(targetIndex);
-    setIsPlaying(true);
-    setHasUnsavedChanges(true);
-
-    // 2. If a local File was provided, stream it to server permanently
-    if (file) {
-      uploadVideoToServer(targetIndex, file, newPosterUrl);
-    } else if (newVideoUrl.startsWith('http://') || newVideoUrl.startsWith('https://') || newVideoUrl.startsWith('/')) {
-      // Synchronize directly for persistence across all live visitors
-      saveSlideToFirestore(targetIndex, newVideoUrl, newPosterUrl).catch((err) =>
-        console.warn('Slide sync notice:', err)
-      );
-
-      // Also persist to server endpoint if running
-      fetch('/api/upload-video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slideIndex: targetIndex,
-          directUrl: newVideoUrl,
-          posterBase64: newPosterUrl,
-        }),
-      })
-        .then(() => {
-          setHasUnsavedChanges(false);
-          setSaveSuccessMessage(`Slide #${targetIndex + 1} video link saved & live on website!`);
-          setTimeout(() => setSaveSuccessMessage(null), 4000);
-        })
-        .catch(() => {
-          setHasUnsavedChanges(false);
-          setSaveSuccessMessage(`Slide #${targetIndex + 1} published to live website!`);
-          setTimeout(() => setSaveSuccessMessage(null), 4000);
-        });
-    }
-  };
-
-  // Explicit Save Changes handler (pushes state to server /api/save-all-slides)
-  const handleSaveChanges = async () => {
-    try {
-      const cleanSlides: Record<number, { videoUrl: string; posterUrl?: string }> = {};
-      Object.entries(replacedBySlide).forEach(([k, v]) => {
-        if (v?.videoUrl && !v.videoUrl.startsWith('blob:')) {
-          cleanSlides[Number(k)] = v;
-        }
-      });
-
-      localStorage.setItem(
-        'snapshots_slide_replacements_strict_v5',
-        JSON.stringify(cleanSlides)
-      );
-
-      const res = await fetch('/api/save-all-slides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slides: cleanSlides }),
-      });
-
-      // Synchronize slides state
-      Object.entries(cleanSlides).forEach(([k, v]) => {
-        saveSlideToFirestore(Number(k), v.videoUrl, v.posterUrl).catch((e) =>
-          console.warn('Slide batch sync notice:', e)
-        );
-      });
-
-      if (res.ok) {
-        setHasUnsavedChanges(false);
-        const count = Object.keys(replacedBySlide).length;
-        setSaveSuccessMessage(
-          count > 0
-            ? `Saved! ${count} video slide${count > 1 ? 's' : ''} locked in and live on website.`
-            : `Slides state saved.`
-        );
-      } else {
-        setSaveSuccessMessage('Saved locally. Changes active in preview.');
-      }
-    } catch {
-      setSaveSuccessMessage('Saved locally in browser.');
-    }
-
-    setTimeout(() => {
-      setSaveSuccessMessage(null);
-    }, 4500);
-  };
-
-  // Trigger file upload for a specific slide
-  const triggerUploadForSlide = (slideIndex: number) => {
-    targetSlideRef.current = slideIndex;
-    setActiveIndex(slideIndex);
-    directFileInputRef.current?.click();
-  };
-
-  // Direct file picked callback
-  const handleFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Use locked target slide index
-    const targetIndex = targetSlideRef.current;
-    const blobUrl = URL.createObjectURL(file);
-
-    // Apply replacement immediately with blob URL so preview is INSTANT and responsive
-    applySlideReplacement(targetIndex, blobUrl, undefined, file);
-
-    // Also extract poster frame in background without blocking upload
-    try {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.src = blobUrl;
-      video.muted = true;
-      video.playsInline = true;
-      video.onloadedmetadata = () => {
-        video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
-      };
-      video.onseeked = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth || 720;
-          canvas.height = video.videoHeight || 1280;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const poster = canvas.toDataURL('image/jpeg', 0.85);
-            setReplacedBySlide((prev) => ({
-              ...prev,
-              [targetIndex]: {
-                videoUrl: prev[targetIndex]?.videoUrl || blobUrl,
-                posterUrl: poster,
-              },
-            }));
-          }
-        } catch {}
-      };
-    } catch {}
-
-    // Reset input so re-selecting same file triggers change
-    e.target.value = '';
-  };
-
-  // Reset a specific slide
-  const handleResetSlide = async (slideIndex: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setReplacedBySlide((prev) => {
-      const updated = { ...prev };
-      delete updated[slideIndex];
-      try {
-        localStorage.setItem(
-          'snapshots_slide_replacements_strict_v5',
-          JSON.stringify(updated)
-        );
-      } catch {}
-      return updated;
-    });
-
-    try {
-      await fetch('/api/reset-slides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slideIndex }),
-      });
-    } catch {}
-
-    setHasUnsavedChanges(false);
-    setSaveSuccessMessage(`Slide #${slideIndex + 1} reset to default.`);
-    setTimeout(() => setSaveSuccessMessage(null), 3000);
-  };
-
-  // Reset all slides
-  const handleResetAllSlides = async (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setReplacedBySlide({});
-    try {
-      localStorage.removeItem('snapshots_slide_replacements_strict_v5');
-      localStorage.removeItem('snapshots_replaced_videos_map');
-      localStorage.removeItem('snapshots_replaced_demo_video');
-    } catch {}
-
-    try {
-      await fetch('/api/reset-slides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resetAll: true }),
-      });
-    } catch {}
-
-    setActiveIndex(0);
-    setIsPlaying(true);
-    setHasUnsavedChanges(false);
-    setSaveSuccessMessage('All slides reset to default demo videos.');
-    setTimeout(() => setSaveSuccessMessage(null), 3000);
   };
 
   // IntersectionObserver to pause video playback and prevent background auto-scroll when off-screen
@@ -891,9 +505,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     setTouchStartX(null);
   };
 
-  const isCurrentSlideCustomized = Boolean(replacedBySlide[activeIndex]);
-  const hasAnyCustomReplacements = Object.keys(replacedBySlide).length > 0;
-
   return (
     <div
       id="work"
@@ -901,15 +512,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
       className="bg-transparent pt-4 sm:pt-6 pb-6 sm:pb-8 relative overflow-hidden select-none"
     >
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Hidden File Picker directly locked to targetSlideRef */}
-        <input
-          ref={directFileInputRef}
-          type="file"
-          accept="video/mp4,video/webm,video/quicktime,video/*"
-          onChange={handleFilePicked}
-          className="hidden"
-        />
-
         {/* 3D-Feel Carousel / Pure Video Slides Stage */}
         <div
           className="relative h-[440px] min-[390px]:h-[480px] sm:h-[530px] md:h-[560px] max-w-5xl lg:max-w-6xl mx-auto flex items-center justify-center overflow-hidden sm:overflow-visible"
@@ -928,7 +530,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
             const isAdjacentLeft = diff === -1;
             const isAdjacentRight = diff === 1;
             const isFarLeft = diff === -2;
-            const isFarRight = diff === 2;
 
             // Show 5 slides: center + 2 equal-sized divs on left + 2 equal-sized divs on right
             if (Math.abs(diff) > 2) {

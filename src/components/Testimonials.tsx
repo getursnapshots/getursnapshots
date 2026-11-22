@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, CheckCircle2, Quote, Sparkles, Heart } from 'lucide-react';
+import { Star, CheckCircle2, Quote, Heart } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { TestimonialItem } from '../types';
 

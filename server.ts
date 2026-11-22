@@ -4,12 +4,10 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
-import nodemailer from 'nodemailer';
 import compression from 'compression';
 import { processLeadSubmission, fetchAdminLeads } from './server/leadService';
 import {
   getAdminSetupStatus,
-  registerMasterAdmin,
   loginAdmin,
   verifyAdminSession,
   invalidateAdminSession,
@@ -114,6 +112,18 @@ async function startServer() {
       }
     } catch (e) {
       console.warn('Could not sync custom-slides.json to dist:', e);
+    }
+  };
+
+  // Helper to sync preload-config.json to dist if dist exists
+  const syncPreloadConfigToDist = (data: { videoUrl: string; updatedAt: string }) => {
+    try {
+      const distDir = path.resolve(__dirname, 'dist');
+      if (fs.existsSync(distDir)) {
+        fs.writeFileSync(path.join(distDir, 'preload-config.json'), JSON.stringify(data, null, 2), 'utf-8');
+      }
+    } catch (e) {
+      console.warn('Could not sync preload-config.json to dist:', e);
     }
   };
 
@@ -248,8 +258,9 @@ async function startServer() {
 
         if (req.body?.directUrl) {
           const directUrl = req.body.directUrl.trim();
-          fs.writeFileSync(configPath, JSON.stringify({ videoUrl: directUrl, updatedAt: new Date().toISOString() }, null, 2), 'utf-8');
-          syncToDist({ preloadVideo: directUrl });
+          const preloadPayload = { videoUrl: directUrl, updatedAt: new Date().toISOString() };
+          fs.writeFileSync(configPath, JSON.stringify(preloadPayload, null, 2), 'utf-8');
+          syncPreloadConfigToDist(preloadPayload);
           return res.json({ success: true, videoUrl: directUrl });
         }
 
@@ -266,12 +277,13 @@ async function startServer() {
           fs.copyFileSync(req.file.path, path.join(distVideosDir, 'preload.mp4'));
         } catch {}
 
+        const preloadPayload = { videoUrl: permanentVideoUrl, updatedAt: new Date().toISOString() };
         fs.writeFileSync(
           configPath,
-          JSON.stringify({ videoUrl: permanentVideoUrl, updatedAt: new Date().toISOString() }, null, 2),
+          JSON.stringify(preloadPayload, null, 2),
           'utf-8'
         );
-        syncToDist({ preloadVideo: permanentVideoUrl });
+        syncPreloadConfigToDist(preloadPayload);
 
         console.log('[Upload-Preload] Preload video saved successfully to /videos/preload.mp4');
         return res.json({ success: true, videoUrl: permanentVideoUrl });

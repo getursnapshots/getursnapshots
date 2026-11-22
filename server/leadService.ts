@@ -14,6 +14,15 @@ function sanitize(val: unknown, maxLen = 300): string {
   return val.replace(/<[^>]*>?/gm, '').trim().slice(0, maxLen);
 }
 
+function escapeHtml(val: string): string {
+  return val
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export interface LeadSubmissionPayload {
   leadId?: string;
   name?: string;
@@ -247,38 +256,55 @@ export async function processLeadSubmission(payload: LeadSubmissionPayload) {
         },
       });
 
+      const escName = escapeHtml(cleanName);
+      const escPhone = escapeHtml(cleanPhone);
+      const escEmail = escapeHtml(cleanEmail);
+      const escCountry = escapeHtml(cleanCountry);
+      const escService = escapeHtml(cleanService);
+      const escPackageName = escapeHtml(cleanPackageName);
+      const escPrice = escapeHtml(cleanPrice);
+      const escDate = escapeHtml(cleanDate);
+      const escTime = escapeHtml(cleanTime);
+      const escDuration = escapeHtml(cleanDuration);
+      const escLocation = escapeHtml(cleanLocation);
+      const escCouponCode = escapeHtml(cleanCouponCode);
+      const escDiscount = escapeHtml(cleanDiscount);
+      const escRequirements = escapeHtml(cleanRequirements);
+      const escTargetEmail = escapeHtml(targetEmail);
+      const escLeadId = escapeHtml(leadId);
+
       const mailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; border: 1px solid #e4e4e7; border-radius: 12px; background-color: #ffffff; color: #18181b;">
           <div style="background-color: #bd1616; padding: 18px 24px; border-radius: 8px 8px 0 0; text-align: center;">
             <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px;">SNAP SHOTS &mdash; NEW BOOKING LEAD</h1>
-            <p style="color: #fecaca; margin: 4px 0 0 0; font-size: 13px;">Lead ID: ${leadId}</p>
+            <p style="color: #fecaca; margin: 4px 0 0 0; font-size: 13px;">Lead ID: ${escLeadId}</p>
           </div>
 
           <div style="padding: 24px 8px;">
             <h2 style="font-size: 17px; margin-top: 0; color: #18181b; border-bottom: 2px solid #bd1616; padding-bottom: 8px;">Client Information</h2>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-              <tr><td style="padding: 8px 0; font-weight: bold; width: 140px; color: #71717a;">Client Name:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600; color: #18181b;">${cleanName}</td></tr>
-              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Phone Number:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;"><a href="tel:${cleanPhone}" style="color: #bd1616; text-decoration: none;">${cleanPhone || 'Not provided'}</a></td></tr>
-              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Email Address:</td><td style="padding: 8px 0; font-size: 15px;"><a href="mailto:${cleanEmail}" style="color: #bd1616; text-decoration: none;">${cleanEmail || 'Not provided'}</a></td></tr>
-              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Country:</td><td style="padding: 8px 0; font-size: 15px;">${cleanCountry}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; width: 140px; color: #71717a;">Client Name:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600; color: #18181b;">${escName}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Phone Number:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;"><a href="tel:${escPhone}" style="color: #bd1616; text-decoration: none;">${escPhone || 'Not provided'}</a></td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Email Address:</td><td style="padding: 8px 0; font-size: 15px;"><a href="mailto:${escEmail}" style="color: #bd1616; text-decoration: none;">${escEmail || 'Not provided'}</a></td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Country:</td><td style="padding: 8px 0; font-size: 15px;">${escCountry}</td></tr>
             </table>
 
             <h2 style="font-size: 17px; margin-top: 0; color: #18181b; border-bottom: 2px solid #bd1616; padding-bottom: 8px;">Shoot Requirements</h2>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-              <tr><td style="padding: 8px 0; font-weight: bold; width: 140px; color: #71717a;">Service:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600; color: #bd1616;">${cleanService}</td></tr>
-              ${cleanPackageName ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Package:</td><td style="padding: 8px 0; font-size: 15px;">${cleanPackageName}</td></tr>` : ''}
-              ${cleanPrice ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Selected Price:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${cleanPrice}</td></tr>` : ''}
-              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Preferred Date:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${cleanDate}</td></tr>
-              ${cleanTime ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Preferred Time:</td><td style="padding: 8px 0; font-size: 15px;">${cleanTime}</td></tr>` : ''}
-              ${cleanDuration ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Duration:</td><td style="padding: 8px 0; font-size: 15px;">${cleanDuration}</td></tr>` : ''}
-              ${cleanLocation ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Shoot Location:</td><td style="padding: 8px 0; font-size: 15px;">${cleanLocation}</td></tr>` : ''}
-              ${cleanCouponCode ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Coupon Applied:</td><td style="padding: 8px 0; font-size: 15px; color: #15803d; font-weight: bold;">${cleanCouponCode} (${cleanDiscount || 'Applied'})</td></tr>` : ''}
+              <tr><td style="padding: 8px 0; font-weight: bold; width: 140px; color: #71717a;">Service:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600; color: #bd1616;">${escService}</td></tr>
+              ${escPackageName ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Package:</td><td style="padding: 8px 0; font-size: 15px;">${escPackageName}</td></tr>` : ''}
+              ${escPrice ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Selected Price:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escPrice}</td></tr>` : ''}
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Preferred Date:</td><td style="padding: 8px 0; font-size: 15px; font-weight: 600;">${escDate}</td></tr>
+              ${escTime ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Preferred Time:</td><td style="padding: 8px 0; font-size: 15px;">${escTime}</td></tr>` : ''}
+              ${escDuration ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Duration:</td><td style="padding: 8px 0; font-size: 15px;">${escDuration}</td></tr>` : ''}
+              ${escLocation ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Shoot Location:</td><td style="padding: 8px 0; font-size: 15px;">${escLocation}</td></tr>` : ''}
+              ${escCouponCode ? `<tr><td style="padding: 8px 0; font-weight: bold; color: #71717a;">Coupon Applied:</td><td style="padding: 8px 0; font-size: 15px; color: #15803d; font-weight: bold;">${escCouponCode} (${escDiscount || 'Applied'})</td></tr>` : ''}
             </table>
 
-            ${cleanRequirements ? `
+            ${escRequirements ? `
               <h2 style="font-size: 17px; margin-top: 0; color: #18181b; border-bottom: 2px solid #bd1616; padding-bottom: 8px;">Client Notes / Instructions</h2>
               <div style="background-color: #f4f4f5; padding: 14px 18px; border-radius: 8px; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-                ${cleanRequirements}
+                ${escRequirements}
               </div>
             ` : ''}
 
@@ -286,7 +312,7 @@ export async function processLeadSubmission(payload: LeadSubmissionPayload) {
               <a href="https://wa.me/${cleanPhone.replace(/[^0-9]/g, '')}" style="display: inline-block; background-color: #25D366; color: #ffffff; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px; margin-right: 10px;">
                 Reply via WhatsApp
               </a>
-              <a href="mailto:${cleanEmail || targetEmail}" style="display: inline-block; background-color: #bd1616; color: #ffffff; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
+              <a href="mailto:${escEmail || escTargetEmail}" style="display: inline-block; background-color: #bd1616; color: #ffffff; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 14px;">
                 Reply via Email
               </a>
             </div>
@@ -294,7 +320,7 @@ export async function processLeadSubmission(payload: LeadSubmissionPayload) {
 
           <div style="background-color: #f4f4f5; padding: 14px; text-align: center; font-size: 12px; color: #71717a; border-radius: 0 0 8px 8px;">
             Captured live by Snap Shots Visual Media Studio booking engine.<br/>
-            Destination Inbox: <strong>${targetEmail}</strong> &bull; Received at ${new Date(timestamp).toLocaleString()}
+            Destination Inbox: <strong>${escTargetEmail}</strong> &bull; Received at ${new Date(timestamp).toLocaleString()}
           </div>
         </div>
       `;

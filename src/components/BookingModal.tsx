@@ -23,8 +23,6 @@ import {
   Package,
   Printer,
   ShieldCheck,
-  Send,
-  ExternalLink,
 } from 'lucide-react';
 import { siteConfig, bookingConfig } from '../config/siteConfig';
 import { BookingFormData } from '../types';

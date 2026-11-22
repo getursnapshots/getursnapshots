@@ -22,14 +22,12 @@ const GALLERY_IMAGES = galleryImages;
 interface GalleryImageCardProps {
   imgUrl: string;
   originalIndex: number;
-  itemIndex: number;
   onOpenModal: (index: number) => void;
 }
 
 const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
   imgUrl,
   originalIndex,
-  itemIndex,
   onOpenModal,
 }) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
@@ -49,9 +47,6 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
       setIsLoaded(true);
     }
   }, [imgUrl]);
-
-  // Eager load and give high fetch priority to initial visible cards (first 6)
-  const isPriority = itemIndex < 6;
 
   return (
     <div
@@ -81,9 +76,9 @@ const GalleryImageCard: React.FC<GalleryImageCardProps> = ({
             srcSet={getResponsiveImageSrcSet(imgUrl, [320, 480, 640, 800])}
             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 280px, 320px"
             alt={item.alt || `Snap Shots portfolio showcase ${originalIndex + 1}`}
-            loading={isPriority ? 'eager' : 'lazy'}
-            fetchPriority={isPriority ? 'high' : 'auto'}
-            decoding={isPriority ? 'sync' : 'async'}
+            loading="lazy"
+            fetchPriority="auto"
+            decoding="async"
             draggable={false}
             onLoad={() => setIsLoaded(true)}
             onError={() => setHasError(true)}
@@ -123,7 +118,7 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
   const [modalImageIndex, setModalImageIndex] = useState<number | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isInView, setIsInView] = useState<boolean>(true);
+  const [isInView, setIsInView] = useState<boolean>(false);
 
   // Triple set enables completely seamless infinite wrapping in both directions
   const duplicatedImages = [...GALLERY_IMAGES, ...GALLERY_IMAGES, ...GALLERY_IMAGES];
@@ -451,7 +446,6 @@ export const PastEventGalleryCarousel: React.FC<PastEventGalleryCarouselProps> =
                   key={`${imgUrl}-${idx}`}
                   imgUrl={imgUrl}
                   originalIndex={originalIndex}
-                  itemIndex={idx}
                   onOpenModal={handleCardClick}
                 />
               );

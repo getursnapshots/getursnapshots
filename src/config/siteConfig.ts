@@ -1,6 +1,5 @@
 import { PackageItem, ServiceItem, ReelWorkItem, TestimonialItem, FaqItem, ProcessStepItem } from '../types';
 import { instagramReels, InstagramReelItem } from './instagramReels';
-import { getDefaultPosterForCategory } from '../utils/instagram';
 
 export { instagramReels };
 export type { InstagramReelItem };

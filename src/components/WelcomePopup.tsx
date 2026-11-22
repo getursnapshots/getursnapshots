@@ -12,7 +12,6 @@ const PROMO_CODE = 'SNAP15';
 export const WelcomePopup: React.FC<WelcomePopupProps> = ({ onClaimOffer }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
-  const [isWhatsAppPinging, setIsWhatsAppPinging] = useState(false);
   const { countryConfig } = useCountry();
 
   useEffect(() => {

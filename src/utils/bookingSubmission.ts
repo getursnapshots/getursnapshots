@@ -182,6 +182,7 @@ export async function submitBookingRequest(
 
   try {
     // 1. Dispatch to server-side lead ingestion & email dispatcher
+    let serverSavedToSupabase = false;
     try {
       const resp = await fetch('/api/send-lead', {
         method: 'POST',
@@ -196,6 +197,7 @@ export async function submitBookingRequest(
 
       if (resp.ok) {
         const result = await resp.json();
+        serverSavedToSupabase = Boolean(result?.supabaseSaved);
         console.log(`[LEAD DISPATCH] Lead dispatched to server:`, result);
       } else {
         console.warn(`[LEAD SERVER STATUS] Server responded with ${resp.status}`);
@@ -204,31 +206,33 @@ export async function submitBookingRequest(
       console.warn('Backend /api/send-lead request notice:', serverErr);
     }
 
-    // 2. Client-side direct write to Supabase backend table
-    try {
-      insertBookingToSupabase({
-        lead_id: assignedLeadId,
-        name: sanitizedPayload.name,
-        phone: sanitizedPayload.phone,
-        email: sanitizedPayload.email || undefined,
-        service: sanitizedPayload.service,
-        package: sanitizedPayload.packageName || undefined,
-        price: 'Custom Pricing',
-        event_date: sanitizedPayload.date,
-        time: sanitizedPayload.time || undefined,
-        duration: sanitizedPayload.duration || undefined,
-        location: sanitizedPayload.location || undefined,
-        country: sanitizedPayload.country || undefined,
-        coupon_code: sanitizedPayload.couponCode || undefined,
-        discount_applied: sanitizedPayload.discountApplied || undefined,
-        requirements: sanitizedPayload.requirements || undefined,
-        source: sanitizedPayload.source || 'Website Booking Form',
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        submitted_at: new Date().toISOString(),
-      }).catch((e) => console.warn('Supabase direct insert notice:', e));
-    } catch {
-      // Non-blocking
+    // 2. Client-side Supabase fallback only if the server did not already persist to Supabase
+    if (!serverSavedToSupabase) {
+      try {
+        insertBookingToSupabase({
+          lead_id: assignedLeadId,
+          name: sanitizedPayload.name,
+          phone: sanitizedPayload.phone,
+          email: sanitizedPayload.email || undefined,
+          service: sanitizedPayload.service,
+          package: sanitizedPayload.packageName || undefined,
+          price: 'Custom Pricing',
+          event_date: sanitizedPayload.date,
+          time: sanitizedPayload.time || undefined,
+          duration: sanitizedPayload.duration || undefined,
+          location: sanitizedPayload.location || undefined,
+          country: sanitizedPayload.country || undefined,
+          coupon_code: sanitizedPayload.couponCode || undefined,
+          discount_applied: sanitizedPayload.discountApplied || undefined,
+          requirements: sanitizedPayload.requirements || undefined,
+          source: sanitizedPayload.source || 'Website Booking Form',
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          submitted_at: new Date().toISOString(),
+        }).catch((e) => console.warn('Supabase direct insert notice:', e));
+      } catch {
+        // Non-blocking
+      }
     }
 
     // 3. If a webhook URL is configured, send POST

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Hero } from '../components/Hero';
+import { InstagramProfileSection } from '../components/InstagramProfileSection';
 import { HeroStatsBar } from '../components/HeroStatsBar';
 import { PastEventGalleryCarousel } from '../components/PastEventGalleryCarousel';
 import { Pricing } from '../components/Pricing';
@@ -36,7 +37,15 @@ export const HomePage: React.FC<HomePageProps> = ({
         />
       </FadeInSection>
 
-      {/* 2. 5000+ Reels Delivered & Core Metrics Bar */}
+      {/* 2. Official Snap Shots Instagram Profile Showcase (@getursnapshots) */}
+      <FadeInSection duration={0.7} yOffset={20}>
+        <InstagramProfileSection
+          onBookClick={() => onBookClick()}
+          onSelectReel={onSelectReel}
+        />
+      </FadeInSection>
+
+      {/* 3. Core Metrics Bar */}
       <FadeInSection>
         <HeroStatsBar />
       </FadeInSection>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, Search, HelpCircle, MessageSquare, Phone, Mail, Sparkles, ArrowUpRight } from 'lucide-react';
+import { ChevronDown, Search, HelpCircle, MessageSquare, ArrowUpRight } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { FaqItem } from '../types';
 

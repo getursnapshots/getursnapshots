@@ -7,15 +7,12 @@ import {
   Film,
   Instagram,
   CheckCircle2,
-  Globe,
-  Sparkles,
 } from 'lucide-react';
 import { ReelWorkItem } from '../types';
 import {
   getDefaultPosterForCategory,
   isValidInstagramUrl,
   extractInstagramId,
-  getCleanInstagramUrl,
 } from '../utils/instagram';
 
 interface UploadVideoModalProps {

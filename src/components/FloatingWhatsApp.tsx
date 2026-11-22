@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { X, Send, CheckCheck, MessageSquare } from 'lucide-react';
+import { X, Send, CheckCheck } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { trackWhatsAppInteraction } from '../services/analyticsService';
 
@@ -350,6 +350,8 @@ export const FloatingWhatsApp: React.FC<FloatingWhatsAppProps> = ({ defaultMessa
                     <img
                       src="/favicon.png"
                       alt="Snap Shots"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover rounded-full"
                     />
                   </div>

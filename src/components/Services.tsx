@@ -10,7 +10,7 @@ interface ServicesProps {
 
 export const Services: React.FC<ServicesProps> = ({ onBookService }) => {
   const [filter, setFilter] = useState<string>('All');
-  const [viewMode, setViewMode] = useState<'scroll' | 'grid'>('scroll');
+  const [viewMode] = useState<'scroll' | 'grid'>('scroll');
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [scrollProgress, setScrollProgress] = useState(0);

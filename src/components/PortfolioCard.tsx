@@ -1,8 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Play, Eye, Sparkles, Volume2, VolumeX, Instagram, ArrowUpRight } from 'lucide-react';
+import { Play, Eye, Sparkles, Volume2, VolumeX, Instagram } from 'lucide-react';
 import { ReelWorkItem } from '../types';
-import { isValidInstagramUrl, getCleanInstagramUrl } from '../utils/instagram';
-import { siteConfig } from '../config/siteConfig';
 import { getResponsiveImageSrcSet } from '../utils/imageUtils';
 
 interface PortfolioCardProps {
@@ -13,7 +11,6 @@ interface PortfolioCardProps {
 
 export const PortfolioCard: React.FC<PortfolioCardProps> = ({ reel, onSelect }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -32,10 +29,7 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ reel, onSelect }) 
   const handleMouseEnter = () => {
     setIsHovered(true);
     if (isDirectVideo && videoRef.current) {
-      videoRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => setIsPlaying(false));
+      videoRef.current.play().catch(() => {});
     }
   };
 
@@ -43,7 +37,6 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ reel, onSelect }) 
     setIsHovered(false);
     if (isDirectVideo && videoRef.current) {
       videoRef.current.pause();
-      setIsPlaying(false);
     }
   };
 
@@ -62,10 +55,6 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({ reel, onSelect }) 
       setIsMuted(videoRef.current.muted);
     }
   };
-
-  const targetInstagramUrl = isValidInstagramUrl(reel.instagramUrl)
-    ? getCleanInstagramUrl(reel.instagramUrl)
-    : siteConfig.business.instagram;
 
   return (
     <div className="relative group">

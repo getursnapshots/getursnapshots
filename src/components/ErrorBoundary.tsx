@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, MessageSquare } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { openExternalUrl } from '../utils/navigationHelper';

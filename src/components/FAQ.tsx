@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronDown, HelpCircle, MessageSquare } from 'lucide-react';
+import { ChevronDown, MessageSquare } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { FaqItem } from '../types';
 
 export const FAQ: React.FC = () => {
-  const [openId, setOpenId] = useState<string | null>(siteConfig.faqs[0].id);
+  const [openId, setOpenId] = useState<string | null>(siteConfig.faqs[0]?.id ?? null);
 
   const toggleFaq = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id));

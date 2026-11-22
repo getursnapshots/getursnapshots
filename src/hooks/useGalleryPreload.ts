@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  preloadImage,
   preloadImages,
   isImagePreloaded,
 } from '../utils/imagePreloader';

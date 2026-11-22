@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowUpRight, CheckCircle2, Clock, MessageSquare, ShieldCheck, Film, Camera } from 'lucide-react';
+import { Sparkles, ArrowUpRight, CheckCircle2, Clock, MessageSquare, ShieldCheck, Film } from 'lucide-react';
 import { siteConfig } from '../config/siteConfig';
 import { ServiceItem } from '../types';
 import { openExternalUrl } from '../utils/navigationHelper';

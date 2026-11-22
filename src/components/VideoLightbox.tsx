@@ -443,6 +443,8 @@ export const VideoLightbox: React.FC<VideoLightboxProps> = ({ reel, onClose }) =
                 srcSet={getResponsiveImageSrcSet(reel.posterUrl, [360, 540, 720])}
                 sizes="(max-width: 768px) 100vw, 400px"
                 alt={reel.title}
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover opacity-60"
               />
             )}
