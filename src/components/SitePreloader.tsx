@@ -140,18 +140,6 @@ export const SitePreloader: React.FC<SitePreloaderProps> = ({ onComplete }) => {
             onError={handleVideoError}
             className="w-full h-full max-h-screen object-contain pointer-events-none"
           />
-
-          {/* Skip Button in Corner */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              finishAndOpenSite();
-            }}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 px-3.5 py-1.5 rounded-full bg-black/70 hover:bg-black/95 text-zinc-300 hover:text-white text-xs font-semibold border border-zinc-800/80 backdrop-blur-sm transition-all cursor-pointer tracking-wider"
-          >
-            Skip &rarr;
-          </button>
         </motion.div>
       )}
     </AnimatePresence>
