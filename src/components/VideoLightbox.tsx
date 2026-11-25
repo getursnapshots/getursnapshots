@@ -12,14 +12,6 @@ import {
 import { ReelWorkItem } from '../types';
 import { getResponsiveImageSrcSet } from '../utils/imageUtils';
 
-const defaultFallbackVideos = [
-  '/videos/reel-1.mp4',
-  '/videos/reel-2.mp4',
-  '/videos/reel-3.mp4',
-  '/videos/reel-4.mp4',
-  '/videos/reel-5.mp4',
-];
-
 interface VideoLightboxProps {
   reel: ReelWorkItem | null;
   onClose: () => void;
@@ -100,13 +92,7 @@ export const VideoLightbox: React.FC<VideoLightboxProps> = ({ reel, onClose }) =
         reel.videoUrl.startsWith('/assets/'))
   );
 
-  const numId =
-    typeof reel.id === 'number'
-      ? reel.id
-      : parseInt(String(reel.id).replace(/\D/g, '') || '0', 10);
-  const effectiveVideoUrl = hasDirectVideo
-    ? (reel.videoUrl as string)
-    : defaultFallbackVideos[Math.abs(numId) % defaultFallbackVideos.length];
+  const effectiveVideoUrl = hasDirectVideo ? (reel.videoUrl as string) : '';
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -243,7 +229,7 @@ export const VideoLightbox: React.FC<VideoLightboxProps> = ({ reel, onClose }) =
           <X className="w-5 h-5" />
         </button>
 
-        {!videoError ? (
+        {effectiveVideoUrl && !videoError ? (
           <>
             <video
               ref={videoRef}

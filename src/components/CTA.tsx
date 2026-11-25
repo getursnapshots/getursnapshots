@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Sparkles, CalendarClock } from 'lucide-react';
 import { WhatsAppIcon } from './icons/WhatsAppIcon';
 import { siteConfig } from '../config/siteConfig';
 import { useCountry } from '../context/CountryContext';
@@ -50,7 +50,19 @@ export const CTA: React.FC<CTAProps> = ({ onBookClick }) => {
               Join thousands of creators, couples, and brands who trust Snap Shots to capture life’s best moments in high-impact vertical video.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+            {/* Non-intrusive monthly availability banner */}
+            <div
+              role="status"
+              id="cta-limited-slots-banner"
+              className="mt-6 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-zinc-900/85 border border-[#ffc800]/25 text-zinc-200 text-xs sm:text-[13px] font-medium shadow-sm max-w-full"
+            >
+              <CalendarClock className="w-3.5 h-3.5 text-[#ffc800] shrink-0" aria-hidden="true" />
+              <span>
+                <strong className="text-[#ffc800] font-semibold">Limited slots available</strong> for this month
+              </span>
+            </div>
+
+            <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={onBookClick}

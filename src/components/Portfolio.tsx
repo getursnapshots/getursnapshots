@@ -20,16 +20,8 @@ interface PortfolioProps {
 
 /**
  * Individual Video Slide Card:
- * Enforces rule: ONLY the middle video plays. All other side videos are strictly paused.
- * When a video comes to the middle, it plays; when it leaves the middle, it pauses.
+ * Renders a video when assigned, or a clean empty slide slot when no video is set.
  */
-const defaultFallbackVideos = [
-  '/videos/reel-1.mp4',
-  '/videos/reel-2.mp4',
-  '/videos/reel-3.mp4',
-  '/videos/reel-4.mp4',
-  '/videos/reel-5.mp4',
-];
 
 interface VideoSlideCardProps {
   videoUrl?: string;
@@ -38,7 +30,6 @@ interface VideoSlideCardProps {
   isPlaying: boolean;
   isMuted: boolean;
   isCarouselInView: boolean;
-  diff: number;
   title?: string;
   category?: string;
   instagramUrl?: string;
@@ -54,7 +45,6 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
   isPlaying,
   isMuted,
   isCarouselInView,
-  diff,
   title,
   category,
   slideNumber,
@@ -65,7 +55,7 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
   const [isMediaReady, setIsMediaReady] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
 
-  // Fallback to high-quality local MP4 if URL is missing, empty, or an external link
+  // Use only explicitly assigned direct video files; never fall back to removed videos
   const isDirectFile = Boolean(
     videoUrl &&
       (videoUrl.endsWith('.mp4') ||
@@ -73,22 +63,17 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
         videoUrl.startsWith('blob:') ||
         videoUrl.includes('/videos/'))
   );
-  const resolvedVideoUrl = isDirectFile
-    ? videoUrl
-    : defaultFallbackVideos[(slideNumber - 1) % defaultFallbackVideos.length] || '/videos/reel-1.mp4';
+  const resolvedVideoUrl = isDirectFile ? videoUrl : '';
 
   // Progressive preloading strategy:
   // - Off-screen carousel: none (prevent multi-MB downloads on initial load)
   // - Center active visible reel: auto
-  // - Adjacent reels: metadata (downloads only dimensions & headers, ~kb)
-  // - Far side reels: none
+  // - Visible side reels: metadata (downloads only headers & first frame, ~kb)
   const preloadStrategy = !isCarouselInView
     ? 'none'
     : isCenter
     ? 'auto'
-    : Math.abs(diff) <= 1
-    ? 'metadata'
-    : 'none';
+    : 'metadata';
 
   // Reset loading state if video source URL changes
   useEffect(() => {
@@ -137,6 +122,38 @@ const VideoSlideCard: React.FC<VideoSlideCardProps> = ({
   const handleMediaLoaded = () => {
     setIsMediaReady(true);
   };
+
+  if (!resolvedVideoUrl) {
+    return (
+      <div className="relative w-full h-full overflow-hidden bg-gradient-to-b from-zinc-900/90 via-zinc-950 to-black flex flex-col justify-between p-4 sm:p-5 select-none">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            Slide 0{slideNumber}
+          </span>
+          {category && (
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              {category}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col items-center justify-center my-auto gap-3 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-center shadow-lg">
+            <Film className="w-5 h-5 text-zinc-500" />
+          </div>
+          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
+            No Video Uploaded
+          </span>
+        </div>
+
+        <div className="text-left">
+          {title && (
+            <p className="text-xs font-semibold text-zinc-400 line-clamp-1">{title}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-zinc-950">
@@ -291,41 +308,23 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
   // Strict replacement dictionary keyed purely by numeric slide index (0, 1, 2, ...)
   const [replacedBySlide, setReplacedBySlide] = useState<
     Record<number, { videoUrl: string; posterUrl?: string }>
-  >(() => {
-    try {
-      localStorage.removeItem('snapshots_slide_replacements_strict_v4');
-      const saved = localStorage.getItem('snapshots_slide_replacements_strict_v5');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const clean: Record<number, { videoUrl: string; posterUrl?: string }> = {};
-        Object.entries(parsed).forEach(([k, v]: [string, any]) => {
-          if (
-            v?.videoUrl &&
-            !v.videoUrl.startsWith('blob:') &&
-            !v.videoUrl.includes('/assets/uploads/') &&
-            !v.videoUrl.includes('instagram.com')
-          ) {
-            clean[Number(k)] = v;
-          }
-        });
-        return clean;
-      }
-      return {};
-    } catch {
-      return {};
-    }
-  });
+  >({});
 
   // Fetch permanent custom slides from server (/api/custom-slides and /custom-slides.json)
-  // Ensures uploaded videos show up reliably on the live website for all visitors
   useEffect(() => {
     let isMounted = true;
     const fetchSavedSlides = async () => {
       try {
+        // Clear any stale legacy slide cache so removed videos don't reappear
+        try {
+          localStorage.removeItem('snapshots_slide_replacements_strict_v4');
+          localStorage.removeItem('snapshots_slide_replacements_strict_v5');
+          localStorage.removeItem('snapshots_custom_slides');
+        } catch {}
+
         // Try /api/custom-slides first, fall back to /custom-slides.json
         let res = await fetch(`/api/custom-slides?t=${Date.now()}`).catch(() => null);
         if (!res || !res.ok || (res.headers.get('content-type') && !res.headers.get('content-type')!.includes('json'))) {
-          // If running on static host (e.g. Vercel) where API routes rewrite to HTML, fetch static JSON
           res = await fetch(`/custom-slides.json?t=${Date.now()}`).catch(() => null);
         }
         if (res && res.ok) {
@@ -349,18 +348,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
                   };
                 }
               });
-              if (Object.keys(parsed).length > 0) {
-                setReplacedBySlide((prev) => {
-                  const merged = { ...prev, ...parsed };
-                  try {
-                    localStorage.setItem(
-                      'snapshots_slide_replacements_strict_v5',
-                      JSON.stringify(merged)
-                    );
-                  } catch {}
-                  return merged;
-                });
-              }
+              setReplacedBySlide(parsed);
             }
           }
         }
@@ -375,25 +363,14 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     let unsubscribeSlides = () => {};
     try {
       unsubscribeSlides = subscribeToSlides((customSlides) => {
-        if (isMounted && Object.keys(customSlides).length > 0) {
+        if (isMounted) {
           const cleanSlides: Record<number, { videoUrl: string; posterUrl?: string }> = {};
           Object.entries(customSlides).forEach(([k, v]) => {
             if (v?.videoUrl && !v.videoUrl.includes('/assets/uploads/')) {
               cleanSlides[Number(k)] = v;
             }
           });
-          if (Object.keys(cleanSlides).length > 0) {
-            setReplacedBySlide((prev) => {
-              const merged = { ...prev, ...cleanSlides };
-              try {
-                localStorage.setItem(
-                  'snapshots_slide_replacements_strict_v5',
-                  JSON.stringify(merged)
-                );
-              } catch {}
-              return merged;
-            });
-          }
+          setReplacedBySlide(cleanSlides);
         }
       });
     } catch (e) {
@@ -406,7 +383,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     };
   }, []);
 
-  // Map reels: Strictly display 5 videos (reel-1.mp4 through reel-5.mp4)
+  // Map slides: Keep 5 slide slots in the carousel (empty when no video is configured)
   const filteredReels: ReelWorkItem[] = siteConfig.portfolioReels
     .slice(0, 5)
     .map((reel, idx) => {
@@ -429,7 +406,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
         posterUrl: cleanReelPoster,
       };
     })
-    .filter((reel) => Boolean(reel.videoUrl && reel.videoUrl.trim() !== ''))
     .slice(0, 5);
 
   const totalSlides = filteredReels.length;
@@ -446,11 +422,11 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
     setIsPlaying(true);
   }, [totalSlides]);
 
-  // Tap on active center video: pop up and play whole video with sound in all devices
+  // Tap on active center video: pop up and play whole video with sound if a video exists
   const handleCenterSlideClick = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     const currentReel = filteredReels[activeIndex];
-    if (currentReel) {
+    if (currentReel && currentReel.videoUrl && currentReel.videoUrl.trim() !== '') {
       handleOpenLightbox(currentReel);
     }
   };
@@ -570,7 +546,6 @@ export const Portfolio: React.FC<PortfolioProps> = ({ onSelectReel, onBookShoot 
                     isPlaying={isPlaying}
                     isMuted={isMuted}
                     isCarouselInView={isCarouselInView}
-                    diff={diff}
                     title={reel.title}
                     category={reel.category}
                     slideNumber={index + 1}
