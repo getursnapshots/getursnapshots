@@ -360,6 +360,19 @@ export const Footer: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Designer Credit */}
+        <div className="mt-6 pt-5 border-t border-zinc-900 text-center text-xs text-zinc-500">
+          Designed by{' '}
+          <a
+            href="https://www.thedigitalpointers.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-300 hover:text-[#ffc800] font-semibold transition-colors underline decoration-zinc-700 underline-offset-4 hover:decoration-[#ffc800]"
+          >
+            The Digital Pointers
+          </a>
+        </div>
       </div>
     </footer>
   );
